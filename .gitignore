@@ -1,0 +1,11 @@
+# Ignore build output folders
+[Bb]in/
+[Oo]bj/
+
+# Ignore Visual Studio temporary files
+.vs/
+*.suo
+*.user
+
+# Ignore other generated files
+*.generated.cs
