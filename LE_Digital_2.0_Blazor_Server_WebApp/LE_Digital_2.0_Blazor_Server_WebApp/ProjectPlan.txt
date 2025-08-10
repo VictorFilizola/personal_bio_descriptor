@@ -1,0 +1,119 @@
+﻿/LEDigital.sln
+|
+|-- 📂 LEDigital.Core/ (Class Library)
+|   |-- 📂 Models/
+|   |   |-- User.cs
+|   |   |-- Version.cs
+|   |   |-- VpParent.cs
+|   |   |-- ManagerParent.cs
+|   |   |-- CostCenterParent.cs
+|   |   |-- CostCenterSub.cs
+|   |-- 📂 Interfaces/
+|   |   |-- IUserService.cs
+|   |   |-- IVersionService.cs
+|   |   |-- IEmailService.cs
+|
+|-- 📂 LEDigital.Infrastructure/ (Class Library)
+|   |-- 📂 Data/
+|   |   |-- AppDbContext.cs
+|   |-- 📂 Repositories/
+|   |   |-- UserService.cs
+|   |   |-- VersionService.cs
+|   |-- 📂 Services/
+|   |   |-- EmailService.cs
+|
+|-- 📂 LEDigital.Server/ (Blazor Server App)
+    |-- 📂 wwwroot/
+    |-- 📂 Data/ (Delete this default folder)
+    |-- 📂 Pages/
+    |   |-- 📂 Controller/
+    |   |   |-- ManageVersions.razor
+    |   |   |-- EditVPs.razor
+    |   |   |-- ControlVersion.razor
+    |   |-- 📂 Director/
+    |   |   |-- DirectorDashboard.razor
+    |   |   |-- EditManagerAreas.razor
+    |   |-- 📂 Manager/
+    |   |   |-- ManagerDashboard.razor
+    |   |   |-- EditCostCenters.razor
+    |   |-- _Host.cshtml
+    |   |-- _Layout.cshtml
+    |   |-- Error.razor
+    |-- 📂 Shared/
+    |   |-- MainLayout.razor
+    |   |-- NavMenu.razor
+    |   |-- LoginDisplay.razor
+    |-- 📂 Services/
+    |   |-- AppState.cs
+    |   |-- CustomAuthenticationStateProvider.cs
+    |-- _Imports.razor
+    |-- App.razor
+    |-- Program.cs
+
+ LEDigital.Core Project (The Heart of the Application) ❤️
+This project holds your business logic and models. It has no dependencies on databases or UI frameworks, making it the most stable part of your application.
+
+Models/
+These are plain C# classes (POCOs) that represent your database tables. They replace the need to work with DataTable directly.
+
+User.cs: Represents a user with their permissions.
+
+Version.cs: Represents a budget version.
+
+VpParent.cs, ManagerParent.cs, CostCenterParent.cs, CostCenterSub.cs: Represent the hierarchical data from your original database tables.
+
+Interfaces/
+These define the "contracts" for what your application can do, without specifying how.
+
+IUserService.cs: Defines methods like Task<User> GetUserByLoginAsync(string login);.
+
+IVersionService.cs: Defines methods for creating, managing, and retrieving budget versions.
+
+IEmailService.cs: Defines a simple Task SendEmailAsync(...) method.
+
+2. LEDigital.Infrastructure Project (The "How-To" Layer) 🛠️
+This project implements the interfaces from LEDigital.Core. It handles all external concerns, primarily the database.
+
+NuGet Packages: You will need to add Microsoft.EntityFrameworkCore.SqlServer and Microsoft.EntityFrameworkCore.Tools.
+
+Data/AppDbContext.cs
+This is your Entity Framework Core DbContext. It represents your connection to the database and defines your tables as DbSet properties. It completely replaces SQLConnectionClass.cs.
+
+Repositories/
+These classes implement the data interfaces from Core using Entity Framework.
+
+UserService.cs: Implements IUserService. Contains the actual EF Core query to fetch a user from the database.
+
+Services/
+EmailService.cs: Implements IEmailService. Contains the logic for sending emails, migrated from your old EmailHandlerClass.cs.
+
+3. LEDigital.Server Project (The User Interface) 🖥️
+This is your Blazor Server application. It handles user interaction, authentication, and displaying data. It knows what to do by calling the services, but not how they are implemented.
+
+Pages/
+This is where your UI lives, now organized by user role to enforce separation.
+
+Controller/, Director/, Manager/: Each folder contains the .razor pages specific to that role.
+
+Page-level Authorization: Each page will have an [Authorize] attribute to secure it, for example: [Authorize(Roles = "Controller, Master")] for ManageVersions.razor.
+
+Shared/NavMenu.razor
+The navigation menu will be modified to only show links to pages the user is authorized to see, using the <AuthorizeView> component.
+
+Services/
+CustomAuthenticationStateProvider.cs: This is the core of your security. It gets the logged-in Windows user, uses the IUserService to fetch their permissions from the database, and creates a security principal. This tells the rest of the Blazor app who the user is and what their role is.
+
+AppState.cs: A scoped service that replaces your static GlobalVariablesClass. It holds user-specific state for the duration of their session, such as the currentVersion they are editing.
+
+Program.cs
+This is the startup file. Here you will:
+
+Configure Windows Authentication.
+
+Register your custom AuthenticationStateProvider.
+
+Register all your services and repositories for dependency injection (e.g., builder.Services.AddScoped<IUserService, UserService>();).
+
+Register your AppDbContext.
+
+This structure provides a clean, secure, and modern foundation for "LE Digital 2.0" that will be a pleasure to work on.

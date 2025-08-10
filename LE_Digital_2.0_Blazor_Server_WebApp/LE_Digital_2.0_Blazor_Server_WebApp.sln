@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.9.34622.214
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LE_Digital_2_Blazor_Server_WebApp", "LE_Digital_2.0_Blazor_Server_WebApp\LE_Digital_2_Blazor_Server_WebApp.csproj", "{B4C1E7F4-67F8-4CFE-875A-71F51CAF3B9D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LE_Digital_2_Blazor_Server_WebApp", "LE_Digital_2.0_Blazor_Server_WebApp\LE_Digital_2_Blazor_Server_WebApp.csproj", "{B4C1E7F4-67F8-4CFE-875A-71F51CAF3B9D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

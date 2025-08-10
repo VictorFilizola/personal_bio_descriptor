@@ -1,4 +1,4 @@
-using LE_Digital_2_Blazor_Server_WebApp.Data;
+using LE_Digital_2_Blazor_Server_WebApp.Server.Data;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 

@@ -1,4 +1,4 @@
-namespace LE_Digital_2_Blazor_Server_WebApp.Data
+namespace LE_Digital_2_Blazor_Server_WebApp.Server.Data
 {
     public class WeatherForecastService
     {
