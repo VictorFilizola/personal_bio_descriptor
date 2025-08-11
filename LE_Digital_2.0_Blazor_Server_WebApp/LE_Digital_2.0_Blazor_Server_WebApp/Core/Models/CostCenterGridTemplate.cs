@@ -3,14 +3,12 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace LE_Digital_2_Blazor_Server_WebApp.Core.Models
 {
-    [Table("costCenterSub")]
-    public class CostCenterSub
+    [Table("costCenterGridTemplate")]
+    public class CostCenterGridTemplate
     {
         [Key]
         public int CostCenterSubID { get; set; }
         public int? CostCenterParentID { get; set; }
-        public int? ManagerID { get; set; }
-        public int? VersionID { get; set; }
         public string? ContaGerencial { get; set; }
 
         [Column(TypeName = "decimal(18, 2)")]
@@ -48,5 +46,8 @@ namespace LE_Digital_2_Blazor_Server_WebApp.Core.Models
 
         [Column(TypeName = "decimal(18, 2)")]
         public decimal? December { get; set; }
+
+        [Column(TypeName = "decimal(18, 2)")]
+        public decimal? TotalValue { get; set; }
     }
 }

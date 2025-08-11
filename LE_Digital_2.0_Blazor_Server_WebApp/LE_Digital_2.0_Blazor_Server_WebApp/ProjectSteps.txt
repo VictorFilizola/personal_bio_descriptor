@@ -1,0 +1,119 @@
+﻿Step-by-Step Development Plan for "LE Digital 2.0"
+Phase 1: Building the Foundation (Core & Data Access) 🏗️
+The goal here is to establish the basic building blocks of your application without touching the UI yet.
+
+Step 1: Define Your Domain Models
+
+Project: LEDigital.Core
+
+Task: In the Models folder, create the plain C# classes that match your database tables (e.g., User.cs, Version.cs, CostCenterParent.cs, etc.). These classes will hold the data as it moves through your application. This replaces using DataTables.
+
+Tip: Start with the User model, as it will be needed for authentication soon.
+
+Step 2: Set Up the Database Context with Entity Framework (EF) Core
+
+Project: LEDigital.Infrastructure
+
+Task: Add the required EF Core NuGet packages (Microsoft.EntityFrameworkCore.SqlServer). In the Data folder, create your AppDbContext.cs class. Define your DbSet properties for each model you created in Step 1.
+
+Goal: This class is now your single point of contact with the database, replacing the old SQLConnectionClass.cs.
+
+Step 3: Implement the User Service
+
+Project: LEDigital.Core -> LEDigital.Infrastructure
+
+Task:
+
+In LEDigital.Core, define an IUserService interface with a method signature like Task<User> GetUserByLoginAsync(string login);.
+
+In LEDigital.Infrastructure, create a UserService class that implements IUserService. Use your AppDbContext to write the EF Core query that finds a user by their login name.
+
+Why: This creates a clean, testable way to get user data, which is essential for the next phase.
+
+Phase 2: Authentication and Application Shell 🔐
+Now, let's make the application recognize the user and build the main layout.
+
+Step 4: Configure Windows Authentication
+
+Project: LEDigital.Server
+
+Task: In Program.cs, configure the application to use Windows Authentication. This will automatically identify the user logged into their machine.
+
+Step 5: Implement Custom Role-Based Authentication
+
+Project: LEDigital.Server
+
+Task: Create the CustomAuthenticationStateProvider class. This class will:
+
+Get the authenticated Windows username.
+
+Use the IUserService you created in Step 3 to fetch the user's details and permission role (e.g., "Director", "Manager") from the database.
+
+Create a ClaimsPrincipal with the user's identity and role claims.
+
+Goal: This step connects your app's security to your database's users table.
+
+Step 6: Build the Role-Aware Layout and Navigation
+
+Project: LEDigital.Server
+
+Task: Modify Shared/NavMenu.razor. Use the <AuthorizeView> component to show or hide navigation links based on the user's role. For example, the "Manage Versions" link should only appear for users in the "Controller" or "Master" role.
+
+Example:
+
+HTML
+
+<AuthorizeView Roles="Controller, Master">
+    <NavLink class="nav-link" href="controller/manage-versions">
+        Manage Versions
+    </NavLink>
+</AuthorizeView>
+Phase 3: Implementing the Workflows (Role by Role) 🚀
+With the shell in place, you can now build the features for each user role, starting from the top of the workflow. For each page, you'll need to create the corresponding service interfaces in .Core and implementations in .Infrastructure.
+
+Step 7: Build the "Controller" Workflow
+
+Project: LEDigital.Server
+
+Task: Create the pages inside the Pages/Controller folder.
+
+ManageVersions.razor: Display a grid of all budget versions. Add a button to launch a modal or navigate to a new page to create a new version (replicating UserControlManageVersions.cs and FormNewVersion.cs).
+
+EditVPs.razor: Allow the Controller to allocate the total budget across the different Directors (replicating FormStep1VP.cs).
+
+Step 8: Build the "Director" Workflow
+
+Project: LEDigital.Server
+
+Task: Create the pages inside Pages/Director.
+
+DirectorDashboard.razor: A landing page that shows the Director which budget versions require their action.
+
+EditManagerAreas.razor: Allow the Director to allocate their assigned budget to their Managers (replicating UserControlEditManagerAreas.cs).
+
+Step 9: Build the "Manager" Workflow
+
+Project: LEDigital.Server
+
+Task: Create the pages inside Pages/Manager.
+
+ManagerDashboard.razor: A landing page showing the Manager their assigned budgets.
+
+EditCostCenters.razor: The most complex UI. This page will allow a Manager to detail their budget across various cost centers and months (replicating FormEditCostCenters.cs). You will likely use a powerful third-party Blazor grid component here.
+
+Phase 4: Final Touches ✨
+Once the core workflows are complete, you can add the remaining features.
+
+Step 10: Implement Shared Services
+
+Project: LEDigital.Infrastructure and LEDigital.Server
+
+Task:
+
+Implement the EmailService to send notifications at the end of workflow steps.
+
+Implement the Excel export functionality on the ControlVersion.razor page. The button click in Blazor will call a service that generates and returns the file for download.
+
+Step 11: Final Testing and Polish
+
+Task: Go through the entire application as each user role. Test every feature, add data validation to your forms, and improve the overall user experience.

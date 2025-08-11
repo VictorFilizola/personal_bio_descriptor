@@ -1,6 +1,10 @@
-﻿namespace LE_Digital_2_Blazor_Server_WebApp.Core.Interfaces
+﻿using LE_Digital_2_Blazor_Server_WebApp.Core.Models;
+using System.Threading.Tasks;
+
+namespace LE_Digital_2_Blazor_Server_WebApp.Core.Interfaces
 {
-    public class IUserService
+    public interface IUserService
     {
+        Task<User?> GetUserByLoginAsync(string login);
     }
 }
