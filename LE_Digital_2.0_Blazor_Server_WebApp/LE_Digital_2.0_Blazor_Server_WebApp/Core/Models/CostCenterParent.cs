@@ -7,6 +7,7 @@ namespace LE_Digital_2_Blazor_Server_WebApp.Core.Models
     public class CostCenterParent
     {
         [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int CostCenterID { get; set; }
         public string? VersionID { get; set; }
         public string? ManagerID { get; set; }
@@ -15,10 +16,8 @@ namespace LE_Digital_2_Blazor_Server_WebApp.Core.Models
         public string? CostCenterName { get; set; }
         public string? User { get; set; }
         public string? Vp { get; set; }
-
         [Column(TypeName = "decimal(18, 2)")]
         public decimal? AllocatedValue { get; set; }
-
         [Column(TypeName = "decimal(18, 2)")]
         public decimal? UsedValue { get; set; }
     }

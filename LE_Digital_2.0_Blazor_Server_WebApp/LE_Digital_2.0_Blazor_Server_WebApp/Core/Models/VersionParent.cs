@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System;
 
 namespace LE_Digital_2_Blazor_Server_WebApp.Core.Models
 {
@@ -7,7 +8,9 @@ namespace LE_Digital_2_Blazor_Server_WebApp.Core.Models
     public class VersionParent
     {
         [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)] // Add this line
         public int VersionID { get; set; }
+
         public string? Status { get; set; }
         public string? Step { get; set; }
 

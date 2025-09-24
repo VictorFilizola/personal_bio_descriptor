@@ -7,6 +7,7 @@ namespace LE_Digital_2_Blazor_Server_WebApp.Core.Models
     public class User
     {
         [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int UserID { get; set; }
         public string? Name { get; set; }
         public string? Login { get; set; }
