@@ -1,8 +1,10 @@
 ﻿using LE_Digital_2_Blazor_Server_WebApp.Core.Models;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace LE_Digital_2_Blazor_Server_WebApp.Core.Interfaces
 {
-    public class IVersionService
+    public interface IVersionService
     {
         Task<List<VersionParent>> GetAllVersionsAsync();
         Task<VersionParent?> GetVersionByIdAsync(int versionId);

@@ -1,6 +1,8 @@
-﻿namespace LE_Digital_2_Blazor_Server_WebApp.Core.Interfaces
+﻿using System.Threading.Tasks;
+
+namespace LE_Digital_2_Blazor_Server_WebApp.Core.Interfaces
 {
-    public class IEmailService
+    public interface IEmailService
     {
         Task SendEmailAsync(string to, string subject, string body);
     }
