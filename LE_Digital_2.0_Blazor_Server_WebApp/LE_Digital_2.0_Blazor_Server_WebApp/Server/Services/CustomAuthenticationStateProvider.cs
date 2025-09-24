@@ -1,9 +1,9 @@
 ﻿using LE_Digital_2_Blazor_Server_WebApp.Core.Interfaces;
 using LE_Digital_2_Blazor_Server_WebApp.Server.Services;
-using Microsoft.AspNetCore.Authentication.Negotiate;
 using Microsoft.AspNetCore.Components.Authorization;
 using System.Linq;
 using System.Security.Claims;
+using System.Security.Principal; // Required for WindowsIdentity
 using System.Threading.Tasks;
 
 namespace LE_Digital_2_Blazor_Server_WebApp.Server.Services
@@ -26,23 +26,27 @@ namespace LE_Digital_2_Blazor_Server_WebApp.Server.Services
                 return new AuthenticationState(_appState.ImpersonatedUser!);
             }
 
-            var windowsIdentity = ClaimsPrincipal.Current?.Identity;
+            // A more robust way to get the Windows user
+            var windowsIdentity = WindowsIdentity.GetCurrent();
             if (windowsIdentity == null || !windowsIdentity.IsAuthenticated)
             {
                 return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
             }
 
-            var loginName = windowsIdentity.Name?.Split('\\').Last();
-            var user = await _userService.GetUserByLoginAsync(loginName ?? "");
+            var loginName = windowsIdentity.Name?.Split('\\').LastOrDefault();
+            var userFromDb = await _userService.GetUserByLoginAsync(loginName ?? "");
 
             var claimsIdentity = new ClaimsIdentity(windowsIdentity);
 
-            if (user != null)
+            if (userFromDb != null)
             {
-                claimsIdentity.AddClaim(new Claim("DisplayName", user.Name ?? ""));
-                if (user.Permission != null)
+                // Add the user's full name from DB as a display name claim
+                claimsIdentity.AddClaim(new Claim("DisplayName", userFromDb.Name ?? ""));
+
+                // Add roles/permissions from the database
+                if (!string.IsNullOrEmpty(userFromDb.Permission))
                 {
-                    var permissions = user.Permission.Split(',').Select(p => p.Trim());
+                    var permissions = userFromDb.Permission.Split(',').Select(p => p.Trim());
                     foreach (var permission in permissions)
                     {
                         claimsIdentity.AddClaim(new Claim(ClaimTypes.Role, permission));

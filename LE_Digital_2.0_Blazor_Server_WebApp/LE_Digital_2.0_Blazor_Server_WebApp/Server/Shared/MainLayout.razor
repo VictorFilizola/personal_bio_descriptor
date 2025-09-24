@@ -11,6 +11,19 @@
 
     <main>
         <div class="top-row px-4">
+
+            @* This is the new user display section *@
+            <AuthorizeView>
+                <Authorized>
+                    <span class="text-white">
+                        User: <strong>@context.User.Identity?.Name</strong> | Roles: <strong>@(string.Join(", ", context.User.FindAll(System.Security.Claims.ClaimTypes.Role).Select(c => c.Value)))</strong>
+                    </span>
+                </Authorized>
+                <NotAuthorized>
+                    <span class="text-warning">Not Authenticated</span>
+                </NotAuthorized>
+            </AuthorizeView>
+
             <a href="https://docs.microsoft.com/aspnet/" target="_blank">About</a>
         </div>
 
@@ -30,7 +43,7 @@
                     @Body
                 </Authorized>
                 <NotAuthorized>
-                    <p>You are not authorized to view this application.</p>
+                    <p class="alert alert-danger mt-4">You are not authorized to view this application. Please contact IT for access.</p>
                 </NotAuthorized>
             </AuthorizeView>
         </article>
