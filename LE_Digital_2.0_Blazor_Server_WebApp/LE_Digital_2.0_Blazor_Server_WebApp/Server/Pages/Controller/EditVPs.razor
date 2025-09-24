@@ -1,5 +1,114 @@
-﻿<h3>EditVPs</h3>
+﻿@page "/controller/edit-vps/{VersionId:int}"
+@attribute [Authorize(Roles = "Controller, Master")]
+
+@using System.Globalization
+@using LE_Digital_2_Blazor_Server_WebApp.Core.Models
+@using LE_Digital_2_Blazor_Server_WebApp.Core.Interfaces
+@inject IVersionService VersionService
+@inject IUserService UserService
+@inject IEmailService EmailService
+@inject NavigationManager NavigationManager
+
+@if (version == null)
+{
+    <p><em>Loading version details...</em></p>
+}
+else
+{
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3>Allocate Budget for Version @VersionId</h3>
+        <button class="btn btn-success" @onclick="FinishStep1" disabled="@(!IsSaveable())">
+            <span class="oi oi-check" aria-hidden="true"></span> Finish Step 1 & Notify Directors
+        </button>
+    </div>
+    <hr />
+
+    <div class="alert alert-info d-flex justify-content-between">
+        <strong>Total Planned Investment: @version.PlannedInvestment?.ToString("C", new CultureInfo("pt-BR"))</strong>
+        <strong>Total Allocated: <span class="@(IsSaveable() ? "text-success" : "text-danger")">@currentTotal.ToString("C", new CultureInfo("pt-BR"))</span></strong>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+
+    <div class="table-responsive">
+        <table class="table table-bordered">
+            <thead class="table-light">
+                <tr>
+                    <th>VP Name</th>
+                    <th>Responsible</th>
+                    <th style="width: 250px;">Value Allocated</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var allocation in vpAllocations)
+                {
+                    <tr>
+                        <td>@allocation.VpName</td>
+                        <td>@allocation.VpUser</td>
+                        <td>
+                            <div class="input-group">
+                                <span class="input-group-text">R$</span>
+                                <input type="number" step="0.01" class="form-control" @bind="allocation.TotalInvestment" @bind:event="oninput" />
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
 
 @code {
+    [Parameter]
+    public int VersionId { get; set; }
 
+    private VersionParent? version;
+    private List<VpParent> vpAllocations = new();
+    private string? errorMessage;
+    private decimal currentTotal => vpAllocations.Sum(a => a.TotalInvestment ?? 0);
+
+    protected override async Task OnInitializedAsync()
+    {
+        version = await VersionService.GetVersionByIdAsync(VersionId);
+        if (version != null && version.Step != "Step1 - Director Cost Allocation")
+        {
+            // If step is already done, redirect away
+            NavigationManager.NavigateTo("/controller/manage-versions");
+            return;
+        }
+
+        if (version != null)
+        {
+            var vpList = await VersionService.GetVpListAsync();
+            vpAllocations = vpList.Select(vp => new VpParent
+                {
+                    VpName = vp.VpName,
+                    VpUser = vp.Responsable,
+                    TotalInvestment = 0
+                }).ToList();
+        }
+    }
+
+    private bool IsSaveable()
+    {
+        return version != null && currentTotal == version.PlannedInvestment;
+    }
+
+    private async Task FinishStep1()
+    {
+        errorMessage = null;
+        if (version == null) return;
+
+        if (!IsSaveable())
+        {
+            errorMessage = "The total allocated value is different than the planned investment. Please adjust the values.";
+            return;
+        }
+
+        await VersionService.CompleteStep1Async(version.VersionID, vpAllocations, EmailService, UserService);
+        NavigationManager.NavigateTo("/controller/manage-versions");
+    }
 }

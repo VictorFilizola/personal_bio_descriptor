@@ -1,0 +1,62 @@
+﻿@using LE_Digital_2_Blazor_Server_WebApp.Core.Models
+@using LE_Digital_2_Blazor_Server_WebApp.Core.Interfaces
+@inject IUserService UserService
+
+<div class="modal-backdrop fade show"></div>
+<div class="modal fade show" style="display:block" role="dialog">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Simulate User View</h5>
+                <button type="button" class="btn-close" @onclick="Close"></button>
+            </div>
+            <div class="modal-body">
+                @if (users == null)
+                {
+                    <p><em>Loading users...</em></p>
+                }
+                else
+                {
+                    <div class="form-group">
+                        <label for="userSelect">Select a user to simulate:</label>
+                        <select id="userSelect" class="form-select" @bind="selectedUserId">
+                            <option value="0">-- Choose User --</option>
+                            @foreach (var user in users)
+                            {
+                                <option value="@user.UserID">@user.Name (@user.Permission)</option>
+                            }
+                        </select>
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="Close">Cancel</button>
+                <button type="button" class="btn btn-primary" @onclick="Simulate" disabled="@(selectedUserId == 0)">Simulate</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback<User> OnUserSelected { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private List<User>? users;
+    private int selectedUserId = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        users = await UserService.GetAllUsersAsync();
+    }
+
+    private async Task Simulate()
+    {
+        var selectedUser = users?.FirstOrDefault(u => u.UserID == selectedUserId);
+        if (selectedUser != null)
+        {
+            await OnUserSelected.InvokeAsync(selectedUser);
+        }
+    }
+
+    private async Task Close() => await OnClose.InvokeAsync(null);
+}

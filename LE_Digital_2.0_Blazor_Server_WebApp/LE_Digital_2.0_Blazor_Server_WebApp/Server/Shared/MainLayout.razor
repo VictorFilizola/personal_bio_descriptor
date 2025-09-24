@@ -1,81 +1,47 @@
 ﻿@inherits LayoutComponentBase
-@inject NavigationManager NavigationManager
-
-<DxLayoutBreakpoint MaxWidth="1200"
-                    @bind-IsActive="@IsMobileLayout" />
+@using LE_Digital_2_Blazor_Server_WebApp.Server.Services
+@inject AppState AppState
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavManager
 
 <div class="page">
-    <DxGridLayout CssClass="page-layout">
-        <Rows>
-            @if(IsMobileLayout) {
-                <DxGridLayoutRow Areas="header" Height="auto"></DxGridLayoutRow>
-                <DxGridLayoutRow Areas="sidebar" Height="auto"></DxGridLayoutRow>
-                <DxGridLayoutRow Areas="content" />
-            }
-            else {
-                <DxGridLayoutRow Areas="header header" Height="auto" />
-                <DxGridLayoutRow Areas="@(IsSidebarExpanded ? "sidebar content" : "content content")" />
-            }
-        </Rows>
-        <Columns>
-            @if(!IsMobileLayout) {
-                <DxGridLayoutColumn Width="auto" />
-                <DxGridLayoutColumn />
-            }
-        </Columns>
-        <Items>
-            <DxGridLayoutItem Area="header" CssClass="layout-item">
-                <Template>
-                    <Header @bind-ToggleOn="@IsSidebarExpanded" />
-                </Template>
-            </DxGridLayoutItem>
-            <DxGridLayoutItem Area="sidebar" CssClass="layout-item">
-                <Template>
-                    <NavMenu StateCssClass="@NavMenuCssClass" />
-                </Template>
-            </DxGridLayoutItem>
-            <DxGridLayoutItem Area="content" CssClass="content px-4 layout-item">
-                <Template>
-                    @Body
-                </Template>
-            </DxGridLayoutItem>
-        </Items>
-    </DxGridLayout>
+    <div class="sidebar">
+        <NavMenu />
     </div>
 
-@code{
-    string? NavMenuCssClass { get; set; }
-    bool _isMobileLayout;
-    bool IsMobileLayout {
-        get => _isMobileLayout;
-        set {
-            _isMobileLayout = value;
-            IsSidebarExpanded = !_isMobileLayout;
-        }
-    }
+    <main>
+        <div class="top-row px-4">
+            <a href="https://docs.microsoft.com/aspnet/" target="_blank">About</a>
+        </div>
 
-    bool _isSidebarExpanded = true;
-    bool IsSidebarExpanded {
-        get => _isSidebarExpanded;
-        set {
-            if(_isSidebarExpanded != value) {
-                NavMenuCssClass = value ? "expand" : "collapse";
-                _isSidebarExpanded = value;
-            }
+        @if (AppState.IsImpersonating)
+        {
+            <div class="alert alert-warning d-flex justify-content-between align-items-center m-2">
+                <span>
+                    <strong>Warning:</strong> You are simulating user: <strong>@AppState.ImpersonatedUser?.Identity?.Name</strong>. Your actions will be recorded as them.
+                </span>
+                <button class="btn btn-sm btn-danger" @onclick="StopImpersonating">Stop Simulating</button>
+            </div>
         }
-    }
 
-    protected override void OnInitialized() {
-        NavigationManager.LocationChanged += OnLocationChanged;
-    }
-    async void OnLocationChanged(object? sender, LocationChangedEventArgs args) {
-        if(IsMobileLayout) {
-            IsSidebarExpanded = false;
-            await InvokeAsync(StateHasChanged);
-        }
-    }
+        <article class="content px-4">
+            <AuthorizeView>
+                <Authorized>
+                    @Body
+                </Authorized>
+                <NotAuthorized>
+                    <p>You are not authorized to view this application.</p>
+                </NotAuthorized>
+            </AuthorizeView>
+        </article>
+    </main>
+</div>
 
-    public void Dispose() {
-        NavigationManager.LocationChanged -= OnLocationChanged;
+@code {
+    private void StopImpersonating()
+    {
+        AppState.StopImpersonation();
+        ((CustomAuthenticationStateProvider)AuthStateProvider).NotifyStateChanged();
+        NavManager.NavigateTo("/", forceLoad: true);
     }
 }

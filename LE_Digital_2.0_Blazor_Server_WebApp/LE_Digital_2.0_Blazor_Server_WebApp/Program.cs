@@ -2,6 +2,9 @@ using LE_Digital_2_Blazor_Server_WebApp.Server.Data;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Authentication.Negotiate;
+using LE_Digital_2_Blazor_Server_WebApp.Core.Interfaces;
+using LE_Digital_2_Blazor_Server_WebApp.Infrastructure.Services;
+using LE_Digital_2_Blazor_Server_WebApp.Server.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +18,10 @@ builder.Services.AddDevExpressBlazor(options => {
 builder.Services.AddSingleton<WeatherForecastService>();
 builder.WebHost.UseWebRoot("wwwroot");
 builder.WebHost.UseStaticWebAssets();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IVersionService, VersionService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<AppState>();
 
 // 1. Add Authentication services and set the default scheme to Negotiate (Windows Auth)
 builder.Services.AddAuthentication(NegotiateDefaults.AuthenticationScheme)

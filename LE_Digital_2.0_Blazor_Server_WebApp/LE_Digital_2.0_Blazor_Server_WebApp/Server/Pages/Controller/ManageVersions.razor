@@ -1,5 +1,126 @@
-﻿<h3>ManageVersions</h3>
+﻿@page "/controller/manage-versions"
+@attribute [Authorize(Roles = "Controller, Master")]
+
+@using System.Security.Claims
+@using LE_Digital_2_Blazor_Server_WebApp.Core.Models
+@using LE_Digital_2_Blazor_Server_WebApp.Core.Interfaces
+@using LE_Digital_2_Blazor_Server_WebApp.Server.Services
+
+@inject IVersionService VersionService
+@inject NavigationManager NavigationManager
+@inject AppState AppState
+@inject AuthenticationStateProvider AuthStateProvider
+
+
+<h3>Manage Budget Versions</h3>
+
+<div class="mb-3">
+    <button class="btn btn-primary" @onclick="() => showNewVersionDialog = true">
+        <span class="oi oi-plus" aria-hidden="true"></span> Create New Version
+    </button>
+    <button class="btn btn-warning" @onclick="() => showSimulateUserDialog = true">
+        <span class="oi oi-person" aria-hidden="true"></span> Simulate User
+    </button>
+</div>
+
+
+@if (showNewVersionDialog)
+{
+    <NewVersionDialog OnSave="HandleNewVersion" OnClose="() => showNewVersionDialog = false" />
+}
+@if (showSimulateUserDialog)
+{
+    <SimulateUserDialog OnUserSelected="HandleUserImpersonation" OnClose="() => showSimulateUserDialog = false" />
+}
+
+
+@if (versions == null)
+{
+    <p><em>Loading versions...</em></p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Version ID</th>
+                <th>Status</th>
+                <th>Current Step</th>
+                <th>Planned Investment</th>
+                <th>Creation Date</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var version in versions)
+            {
+                <tr>
+                    <td>@version.VersionID</td>
+                    <td><span class="badge bg-secondary">@version.Status</span></td>
+                    <td>@version.Step</td>
+                    <td>@version.PlannedInvestment?.ToString("C")</td>
+                    <td>@version.CreationDate?.ToShortDateString()</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => NavigateToEdit(version)"
+                                disabled="@(version.Step != "Step1 - Director Cost Allocation")">
+                            Allocate VPs
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
 
 @code {
+    private List<VersionParent>? versions;
+    private bool showNewVersionDialog = false;
+    private bool showSimulateUserDialog = false;
 
+    protected override async Task OnInitializedAsync()
+    {
+        versions = await VersionService.GetAllVersionsAsync();
+    }
+
+    async Task HandleNewVersion(VersionParent version)
+    {
+        version.Status = "Executing";
+        version.Step = "Step1 - Director Cost Allocation";
+        version.CreationDate = DateTime.Now;
+        version.UsedInvestment = 0;
+
+        await VersionService.CreateVersionAsync(version);
+        showNewVersionDialog = false;
+        versions = await VersionService.GetAllVersionsAsync(); // Refresh list
+    }
+
+    void NavigateToEdit(VersionParent version)
+    {
+        if (version.Step == "Step1 - Director Cost Allocation")
+        {
+            NavigationManager.NavigateTo($"/controller/edit-vps/{version.VersionID}");
+        }
+    }
+
+    private void HandleUserImpersonation(User selectedUser)
+    {
+        showSimulateUserDialog = false;
+
+        var identity = new ClaimsIdentity("Impersonation");
+        identity.AddClaim(new Claim(ClaimTypes.Name, selectedUser.Name ?? ""));
+        if (selectedUser.Permission != null)
+        {
+            var permissions = selectedUser.Permission.Split(',').Select(p => p.Trim());
+            foreach (var permission in permissions)
+            {
+                identity.AddClaim(new Claim(ClaimTypes.Role, permission));
+            }
+        }
+        var impersonatedPrincipal = new ClaimsPrincipal(identity);
+
+        AppState.StartImpersonation(impersonatedPrincipal);
+        ((CustomAuthenticationStateProvider)AuthStateProvider).NotifyStateChanged();
+        NavigationManager.NavigateTo("/", forceLoad: true);
+    }
 }

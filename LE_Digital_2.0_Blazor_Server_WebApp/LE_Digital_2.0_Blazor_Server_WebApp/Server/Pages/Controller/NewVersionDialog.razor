@@ -1,0 +1,36 @@
+﻿@using LE_Digital_2_Blazor_Server_WebApp.Core.Models
+
+<div class="modal-backdrop fade show"></div>
+<div class="modal fade show" style="display:block" role="dialog">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create New Budget Version</h5>
+                <button type="button" class="btn-close" @onclick="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="plannedInvestment">Total Planned Investment:</label>
+                    <input id="plannedInvestment" type="number" class="form-control" @bind="newVersion.PlannedInvestment" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="Close">Cancel</button>
+                <button type="button" class="btn btn-primary" @onclick="Save">Create Version</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public EventCallback<VersionParent> OnSave { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    private VersionParent newVersion = new VersionParent();
+
+    private async Task Save() => await OnSave.InvokeAsync(newVersion);
+    private async Task Close() => await OnClose.InvokeAsync(null);
+}

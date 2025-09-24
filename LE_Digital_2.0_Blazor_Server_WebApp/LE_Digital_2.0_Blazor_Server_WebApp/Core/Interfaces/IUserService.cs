@@ -6,5 +6,7 @@ namespace LE_Digital_2_Blazor_Server_WebApp.Core.Interfaces
     public interface IUserService
     {
         Task<User?> GetUserByLoginAsync(string login);
+        Task<User?> GetUserByNameAsync(string name);
+        Task<List<User>> GetAllUsersAsync();
     }
 }
