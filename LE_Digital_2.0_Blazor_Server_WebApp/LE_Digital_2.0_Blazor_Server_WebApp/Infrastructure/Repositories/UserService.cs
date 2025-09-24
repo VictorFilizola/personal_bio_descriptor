@@ -2,6 +2,8 @@
 using LE_Digital_2_Blazor_Server_WebApp.Core.Models;
 using LE_Digital_2_Blazor_Server_WebApp.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace LE_Digital_2_Blazor_Server_WebApp.Infrastructure.Repositories
@@ -21,15 +23,9 @@ namespace LE_Digital_2_Blazor_Server_WebApp.Infrastructure.Repositories
             {
                 return null;
             }
-
-            // This performs a case-insensitive search.
             return await _context.Users
                 .FirstOrDefaultAsync(u => u.Login != null && u.Login.ToUpper() == login.ToUpper());
         }
-
-        // NOTE: The other methods (GetUserByNameAsync, GetAllUsersAsync) were missing from this file.
-        // You should move them from the other UserService.cs into this one, or decide which one to keep.
-        // For now, I will add them here to ensure the project compiles.
 
         public async Task<User?> GetUserByNameAsync(string name)
         {
@@ -40,7 +36,7 @@ namespace LE_Digital_2_Blazor_Server_WebApp.Infrastructure.Repositories
             return await _context.Users.FirstOrDefaultAsync(u => u.Name == name);
         }
 
-        public async Task<System.Collections.Generic.List<User>> GetAllUsersAsync()
+        public async Task<List<User>> GetAllUsersAsync()
         {
             return await _context.Users.OrderBy(u => u.Name).ToListAsync();
         }

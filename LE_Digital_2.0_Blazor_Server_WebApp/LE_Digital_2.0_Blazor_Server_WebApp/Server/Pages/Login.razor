@@ -32,12 +32,15 @@
 
     private async Task HandleLogin()
     {
+        errorMessage = null;
         var customAuthProvider = (CustomAuthenticationStateProvider)AuthStateProvider;
         var success = await customAuthProvider.LoginAsync(username);
 
         if (success)
         {
-            NavManager.NavigateTo("/", forceLoad: true);
+            // Remove forceLoad: true to navigate within the Blazor app
+            // and preserve the authentication state.
+            NavManager.NavigateTo("/");
         }
         else
         {

@@ -121,7 +121,8 @@ else
         var impersonatedPrincipal = new ClaimsPrincipal(identity);
 
         AppState.StartImpersonation(impersonatedPrincipal);
-        ((CustomAuthenticationStateProvider)AuthStateProvider).NotifyStateChanged();
+
+        // The old, incorrect line is removed. We navigate instead.
         NavigationManager.NavigateTo("/", forceLoad: true);
     }
 }
