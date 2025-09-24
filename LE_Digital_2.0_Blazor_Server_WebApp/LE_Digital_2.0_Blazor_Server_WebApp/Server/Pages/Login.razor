@@ -1,0 +1,47 @@
+﻿@page "/login"
+@using LE_Digital_2_Blazor_Server_WebApp.Server.Services
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavManager
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-4">
+            <div class="card mt-5">
+                <div class="card-header">
+                    <h4>Login</h4>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label for="username">Username:</label>
+                        <input id="username" class="form-control" @bind="username" placeholder="e.g., TEIXVIBR" />
+                    </div>
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger mt-2">@errorMessage</div>
+                    }
+                    <button class="btn btn-primary mt-3 w-100" @onclick="HandleLogin">Login</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string username = string.Empty;
+    private string? errorMessage;
+
+    private async Task HandleLogin()
+    {
+        var customAuthProvider = (CustomAuthenticationStateProvider)AuthStateProvider;
+        var success = await customAuthProvider.LoginAsync(username);
+
+        if (success)
+        {
+            NavManager.NavigateTo("/", forceLoad: true);
+        }
+        else
+        {
+            errorMessage = "Login failed. User not found or has no permissions.";
+        }
+    }
+}

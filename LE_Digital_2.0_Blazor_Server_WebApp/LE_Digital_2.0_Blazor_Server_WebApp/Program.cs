@@ -1,30 +1,22 @@
 using LE_Digital_2_Blazor_Server_WebApp.Core.Interfaces;
 using LE_Digital_2_Blazor_Server_WebApp.Infrastructure.Data;
+using LE_Digital_2_Blazor_Server_WebApp.Infrastructure.Repositories;
 using LE_Digital_2_Blazor_Server_WebApp.Infrastructure.Services;
 using LE_Digital_2_Blazor_Server_WebApp.Server.Services;
-using Microsoft.AspNetCore.Authentication.Negotiate;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
-using DevExpress.Blazor; 
+using DevExpress.Blazor;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// CORRECT: DbContext is registered here
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(connectionString));
 
-// CORRECT: Authentication is registered ONCE here
-builder.Services.AddAuthentication(NegotiateDefaults.AuthenticationScheme)
-   .AddNegotiate();
-
-builder.Services.AddAuthorization(options =>
-{
-    options.FallbackPolicy = options.DefaultPolicy;
-});
-
+// Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
+builder.Services.AddDevExpressBlazor();
 
 // Register your custom services
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthenticationStateProvider>();
@@ -32,7 +24,6 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IVersionService, VersionService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<AppState>();
-builder.Services.AddDevExpressBlazor();
 
 var app = builder.Build();
 
@@ -47,8 +38,7 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 
-// Add the authentication and authorization middleware
-app.UseAuthentication();
+// We no longer need UseAuthentication or UseAuthorization here for this simple model
 
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
