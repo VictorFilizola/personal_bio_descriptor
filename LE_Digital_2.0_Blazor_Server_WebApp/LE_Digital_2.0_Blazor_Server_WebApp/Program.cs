@@ -49,7 +49,6 @@ app.UseRouting();
 
 // Add the authentication and authorization middleware
 app.UseAuthentication();
-app.UseAuthorization();
 
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
