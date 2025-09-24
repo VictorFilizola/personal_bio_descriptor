@@ -5,6 +5,7 @@ using LE_Digital_2_Blazor_Server_WebApp.Server.Services;
 using Microsoft.AspNetCore.Authentication.Negotiate;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
+using DevExpress.Blazor; 
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,6 +32,7 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IVersionService, VersionService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<AppState>();
+builder.Services.AddDevExpressBlazor();
 
 var app = builder.Build();
 
