@@ -23,11 +23,13 @@ builder.Services.AddDevExpressBlazor();
 
 // Register your custom services
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthenticationStateProvider>();
-builder.Services.AddScoped<IUserService, UserService>(); // Keep services Scoped
-builder.Services.AddScoped<IVersionService, VersionService>(); // Keep services Scoped
-builder.Services.AddScoped<IEmailService, EmailService>(); // Keep services Scoped
-builder.Services.AddScoped<IDirectorService, DirectorService>(); // Add DirectorService registration
+builder.Services.AddScoped<IUserService, UserService>(); 
+builder.Services.AddScoped<IVersionService, VersionService>(); 
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IDirectorService, DirectorService>();
+builder.Services.AddScoped<IManagerService, ManagerService>();
 builder.Services.AddScoped<AppState>();
+
 
 var app = builder.Build();
 

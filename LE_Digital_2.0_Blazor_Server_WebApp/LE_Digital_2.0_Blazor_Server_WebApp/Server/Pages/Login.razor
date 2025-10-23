@@ -33,8 +33,8 @@
 @code {
     private string username = string.Empty;
     private string? errorMessage;
+    [Inject] private IManagerService ManagerService { get; set; } // Inject ManagerService
 
-    // This method handles the key press event
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
         if (e.Key == "Enter")
@@ -60,13 +60,30 @@
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
             var user = authState.User;
 
+            // Priority 1: Controller / Master
             if (user.IsInRole("Controller") || user.IsInRole("Master"))
             {
                 NavManager.NavigateTo("/");
             }
+            // Priority 2: Director (who may also have manager tasks)
             else if (user.IsInRole("Director"))
             {
                 NavManager.NavigateTo("/director/dashboard");
+            }
+            // Priority 3: Pure Manager
+            else if (user.IsInRole("Manager"))
+            {
+                // Check if they have tasks
+                var tasks = await ManagerService.GetPendingManagerTasksAsync(user);
+                if (tasks.Any())
+                {
+                    NavManager.NavigateTo("/manager/dashboard");
+                }
+                else
+                {
+                    errorMessage = "You are a Manager, but you have no pending tasks.";
+                    customAuthProvider.Logout();
+                }
             }
             else
             {

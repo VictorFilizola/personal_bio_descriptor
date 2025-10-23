@@ -10,7 +10,7 @@ namespace LE_Digital_2_Blazor_Server_WebApp.Core.Models
     public class HistoricData
     {
         // Property names should match view column names for simplicity
-        public string? CosCenter { get; set; }
+        public string? centroCusto { get; set; }
         public string? ManagingAccount { get; set; }
         public int? Year { get; set; }
 
@@ -39,7 +39,7 @@ namespace LE_Digital_2_Blazor_Server_WebApp.Core.Models
         [Column(TypeName = "decimal(18, 2)")]
         public decimal? December { get; set; }
 
-        public string? CostCenter { get; set; } // Note: Duplicates CosCenter? Check view definition if needed.
+        public string? CostCenter { get; set; }
         public string? Responsible { get; set; }
     }
 }

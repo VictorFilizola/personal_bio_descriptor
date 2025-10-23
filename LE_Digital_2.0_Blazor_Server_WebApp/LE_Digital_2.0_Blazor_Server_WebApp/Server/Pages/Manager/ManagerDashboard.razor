@@ -1,5 +1,66 @@
-﻿<h3>ManagerDashboard</h3>
+﻿@page "/manager/dashboard"
+@attribute [Authorize(Roles = "Manager, Director, Master")]
+@using LE_Digital_2_Blazor_Server_WebApp.Core.Models
+@inject IManagerService ManagerService
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
+
+<h3>Manager Dashboard - Pending Allocations</h3>
+
+@if (pendingTasks == null)
+{
+    <p><em>Loading your tasks...</em></p>
+}
+else if (!pendingTasks.Any())
+{
+    <div class="alert alert-success">You have no pending cost center allocations.</div>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Version ID</th>
+                <th>Task</th>
+                <th>Allocated Investment</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var task in pendingTasks)
+            {
+                <tr>
+                    <td>@task.VersionID</td>
+                    <td>Cost Center Allocation</td>
+                    <td>@task.AllocatedInvestment?.ToString("C")</td>
+                    <td><span class="badge bg-warning">@task.Status</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" @onclick="() => NavigateToAllocation(task.ManagerID)">
+                            Allocate Cost Centers
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
 
 @code {
+    private List<ManagerParent>? pendingTasks;
 
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user?.Identity?.IsAuthenticated ?? false)
+        {
+            pendingTasks = await ManagerService.GetPendingManagerTasksAsync(user);
+        }
+    }
+
+    void NavigateToAllocation(int managerParentId)
+    {
+        NavigationManager.NavigateTo($"/manager/allocate-cost-centers/{managerParentId}");
+    }
 }

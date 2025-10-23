@@ -5,6 +5,12 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
+    <None Remove="Server\Pages\Manager\AllocateCostCenters.razor.css" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Server\Pages\Manager\AllocateCostCenters.razor.css" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="DevExpress.Blazor" Version="23.1.14" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Negotiate" Version="8.0.20" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.8" />

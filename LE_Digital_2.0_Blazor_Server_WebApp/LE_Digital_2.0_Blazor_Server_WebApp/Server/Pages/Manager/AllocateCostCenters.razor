@@ -1,0 +1,211 @@
+﻿@page "/manager/allocate-cost-centers/{ManagerParentId:int}"
+@attribute [Authorize(Roles = "Manager, Director, Master")]
+
+@using System.Globalization
+@using LE_Digital_2_Blazor_Server_WebApp.Core.Models
+@inject IManagerService ManagerService
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
+
+@if (managerTask == null || costCenters == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <h3 class="card-title">Cost Center Allocation (Version @managerTask.VersionID)</h3>
+            <div class="d-flex justify-content-between">
+                <div>
+                    <strong>Total Allocated Investment:</strong>
+                    <span class="text-primary">@managerTask.AllocatedInvestment?.ToString("C", ptBR)</span>
+                </div>
+                <div>
+                    <strong>Used Investment:</strong>
+                    <span class="@(UsedTotal > managerTask.AllocatedInvestment ? "text-danger" : "text-success")">@UsedTotal.ToString("C", ptBR)</span>
+                </div>
+                <div>
+                    <strong>Remaining Value:</strong>
+                    <span class="@(RemainingValue < 0 ? "text-danger" : "")">@RemainingValue.ToString("C", ptBR)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <button class="btn btn-success" @onclick="OnFinishClicked" disabled="@(UsedTotal > managerTask.AllocatedInvestment)">
+            <span class="oi oi-check" aria-hidden="true"></span> Finish and Submit
+        </button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+
+    <div class="table-container">
+        @* Wrapping div for scrolling *@
+        <table class="table table-bordered table-striped">
+            <thead class="table-light">
+                <tr>
+                    <th>Status</th>
+                    <th>Cost Center</th>
+                    <th>Cost Center Name</th>
+                    <th>User</th>
+                    <th>VP</th>
+                    <th style="width: 200px;">Allocated Value</th>
+                    <th style="width: 100px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var cc in costCenters)
+                {
+                    <tr>
+                        <td><span class="badge bg-secondary">@cc.Status</span></td>
+                        <td>@cc.CostCenterCode</td>
+                        <td>@cc.CostCenterName</td>
+                        <td>@cc.User</td>
+                        <td>@cc.Vp</td>
+                        <td>
+                            <div class="input-group">
+                                <span class="input-group-text">R$</span>
+                                @* Input is now readonly *@
+                                <input type="number" step="0.01" class="form-control"
+                                       @bind="cc.AllocatedValue" @bind:event="oninput" readonly />
+                            </div>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowEditPopup(cc.CostCenterID)">
+                                <span class="oi oi-pencil" aria-hidden="true"></span> Edit
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div> @* Closing div for scrolling *@
+}
+
+@if (showWarningPopup)
+{
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal fade show" style="display:block" role="dialog">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Warning: Value Not Fully Allocated</h5>
+                    <button type="button" class="btn-close" @onclick="CancelWarning"></button>
+                </div>
+                <div class="modal-body">
+                    <p>The total allocated value (@UsedTotal.ToString("C", ptBR)) is less than your assigned budget (@managerTask?.AllocatedInvestment?.ToString("C", ptBR)).</p>
+                    <p>A value of <strong>@RemainingValue.ToString("C", ptBR)</strong> is missing.</p>
+                    <p>Do you want to proceed anyway?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelWarning">Cancel</button>
+                    <button type="button" class="btn btn-primary" @onclick="ProceedAnyway">Yes, Proceed</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showEditPopup)
+{
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal fade show" style="display:block" role="dialog">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Cost Center (Placeholder)</h5>
+                    <button type="button" class="btn-close" @onclick="CloseEditPopup"></button>
+                </div>
+                <div class="modal-body">
+                    <p>This is where the edit functionality for Cost Center ID @selectedCostCenterId will go.</p>
+                    <p>We will implement this in the next step.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseEditPopup">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+
+@code {
+    [Parameter]
+    public int ManagerParentId { get; set; }
+
+    private ManagerParent? managerTask;
+    private List<CostCenterParent>? costCenters;
+    private string? errorMessage;
+    private bool showWarningPopup = false;
+    private bool showEditPopup = false;
+    private int selectedCostCenterId;
+    private CultureInfo ptBR = new CultureInfo("pt-BR");
+
+    private decimal UsedTotal => costCenters?.Sum(c => c.AllocatedValue ?? 0) ?? 0;
+    private decimal RemainingValue => (managerTask?.AllocatedInvestment ?? 0) - UsedTotal;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user?.Identity?.IsAuthenticated == false)
+        {
+            NavigationManager.NavigateTo("/login");
+            return;
+        }
+
+        managerTask = await ManagerService.GetManagerTaskDetailsAsync(ManagerParentId, user);
+        if (managerTask == null)
+        {
+            NavigationManager.NavigateTo("/manager/dashboard");
+            return;
+        }
+
+        costCenters = await ManagerService.GetCostCentersForManagerAsync(ManagerParentId);
+    }
+
+    private void OnFinishClicked()
+    {
+        errorMessage = null;
+        if (UsedTotal < (managerTask?.AllocatedInvestment ?? 0))
+        {
+            showWarningPopup = true;
+        }
+        else if (UsedTotal == (managerTask?.AllocatedInvestment ?? 0))
+        {
+            CompleteStep3();
+        }
+        else
+        {
+            errorMessage = "Used investment cannot be greater than allocated investment.";
+        }
+    }
+
+    private void CompleteStep3()
+    {
+        Console.WriteLine("Saving allocations...");
+        // TODO: Call service to update costCenterParents & managerParent status
+        NavigationManager.NavigateTo("/manager/dashboard");
+    }
+
+    private void CancelWarning() => showWarningPopup = false;
+
+    private void ProceedAnyway()
+    {
+        showWarningPopup = false;
+        CompleteStep3();
+    }
+
+    private void ShowEditPopup(int costCenterId)
+    {
+        selectedCostCenterId = costCenterId;
+        showEditPopup = true;
+    }
+
+    private void CloseEditPopup() => showEditPopup = false;
+}
