@@ -13,7 +13,11 @@
                 <div class="card-body">
                     <div class="form-group">
                         <label for="username">Username:</label>
-                        <input id="username" class="form-control" @bind="username" placeholder="e.g., TEIXVIBR" />
+                        @* Added @onkeydown="HandleKeyDown" *@
+                        <input id="username" class="form-control"
+                               @bind="username"
+                               @onkeydown="HandleKeyDown"
+                               placeholder="e.g., TEIXVIBR" />
                     </div>
                     @if (!string.IsNullOrEmpty(errorMessage))
                     {
@@ -30,17 +34,45 @@
     private string username = string.Empty;
     private string? errorMessage;
 
+    // This method handles the key press event
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await HandleLogin();
+        }
+    }
+
     private async Task HandleLogin()
     {
         errorMessage = null;
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            errorMessage = "Please enter a username.";
+            return;
+        }
+
         var customAuthProvider = (CustomAuthenticationStateProvider)AuthStateProvider;
         var success = await customAuthProvider.LoginAsync(username);
 
         if (success)
         {
-            // Remove forceLoad: true to navigate within the Blazor app
-            // and preserve the authentication state.
-            NavManager.NavigateTo("/");
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (user.IsInRole("Controller") || user.IsInRole("Master"))
+            {
+                NavManager.NavigateTo("/");
+            }
+            else if (user.IsInRole("Director"))
+            {
+                NavManager.NavigateTo("/director/dashboard");
+            }
+            else
+            {
+                errorMessage = "You do not have a role assigned that allows access.";
+                customAuthProvider.Logout();
+            }
         }
         else
         {

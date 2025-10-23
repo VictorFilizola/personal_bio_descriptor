@@ -10,11 +10,13 @@ namespace LE_Digital_2_Blazor_Server_WebApp.Infrastructure.Repositories
 {
     public class UserService : IUserService
     {
-        private readonly AppDbContext _context;
+        // *** CHANGE THIS: Inject the factory ***
+        private readonly IDbContextFactory<AppDbContext> _contextFactory;
 
-        public UserService(AppDbContext context)
+        // *** CHANGE THIS: Update constructor ***
+        public UserService(IDbContextFactory<AppDbContext> contextFactory)
         {
-            _context = context;
+            _contextFactory = contextFactory;
         }
 
         public async Task<User?> GetUserByLoginAsync(string login)
@@ -23,7 +25,9 @@ namespace LE_Digital_2_Blazor_Server_WebApp.Infrastructure.Repositories
             {
                 return null;
             }
-            return await _context.Users
+            // *** CHANGE THIS: Create context instance ***
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Users
                 .FirstOrDefaultAsync(u => u.Login != null && u.Login.ToUpper() == login.ToUpper());
         }
 
@@ -33,12 +37,16 @@ namespace LE_Digital_2_Blazor_Server_WebApp.Infrastructure.Repositories
             {
                 return null;
             }
-            return await _context.Users.FirstOrDefaultAsync(u => u.Name == name);
+            // *** CHANGE THIS: Create context instance ***
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Users.FirstOrDefaultAsync(u => u.Name == name);
         }
 
         public async Task<List<User>> GetAllUsersAsync()
         {
-            return await _context.Users.OrderBy(u => u.Name).ToListAsync();
+            // *** CHANGE THIS: Create context instance ***
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Users.OrderBy(u => u.Name).ToListAsync();
         }
     }
 }

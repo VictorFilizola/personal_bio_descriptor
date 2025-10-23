@@ -1,18 +1,22 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
-using Microsoft.EntityFrameworkCore; // For Keyless attribute
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace LE_Digital_2_Blazor_Server_WebApp.Core.Models
 {
     [Table("costCenterDesignation")]
-    [Keyless]
     public class CostCenterDesignation
     {
-        public string? CostCenter { get; set; }
-        public string? Vp { get; set; }
-        public string? Responsible { get; set; }
+        [Key]
+        // Assuming IDENTITY - remove DatabaseGenerated if it's not auto-incrementing
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int CostCenterID { get; set; }
 
-        // Add missing properties
-        public string? User { get; set; }
-        public string? CostCenterName { get; set; }
+        public string? CostCenter { get; set; }
+
+        [Column("denomination")] // Map to the correct column name
+        public string? Denomination { get; set; }
+
+        public string? Responsible { get; set; } // This is the Manager's name
+        public string? Vp { get; set; }
     }
 }

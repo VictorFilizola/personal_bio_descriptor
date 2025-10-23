@@ -11,89 +11,110 @@ namespace LE_Digital_2_Blazor_Server_WebApp.Infrastructure.Services
 {
     public class VersionService : IVersionService
     {
-        private readonly AppDbContext _context;
+        // *** CHANGE THIS: Inject the factory ***
+        private readonly IDbContextFactory<AppDbContext> _contextFactory;
 
-        public VersionService(AppDbContext context)
+        // *** CHANGE THIS: Update constructor ***
+        public VersionService(IDbContextFactory<AppDbContext> contextFactory)
         {
-            _context = context;
-        }
-        public async Task TrySetVersionStepAsync(int versionId, string newStep)
-        {
-            var version = await _context.VersionParents.FindAsync(versionId);
-            // Only update if the current step is before the new step
-            // (You might need a more robust way to compare steps if they aren't linear like Step1, Step2, Step3)
-            if (version != null && version.Step != newStep && version.Step != "Step3 - Cost Center Allocation") // Example check
-            {
-                version.Step = newStep;
-                _context.VersionParents.Update(version);
-                await _context.SaveChangesAsync();
-            }
+            _contextFactory = contextFactory;
         }
 
         public async Task<List<VersionParent>> GetAllVersionsAsync()
         {
-            return await _context.VersionParents.OrderByDescending(v => v.CreationDate).ToListAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.VersionParents.OrderByDescending(v => v.CreationDate).ToListAsync();
         }
 
         public async Task<VersionParent?> GetVersionByIdAsync(int versionId)
         {
-            return await _context.VersionParents.FindAsync(versionId);
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.VersionParents.FindAsync(versionId);
         }
 
         public async Task CreateVersionAsync(VersionParent version)
         {
-            _context.VersionParents.Add(version);
-            await _context.SaveChangesAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            context.VersionParents.Add(version);
+            await context.SaveChangesAsync();
         }
 
         public async Task UpdateVersionAsync(VersionParent version)
         {
-            _context.Entry(version).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            context.Entry(version).State = EntityState.Modified;
+            await context.SaveChangesAsync();
         }
 
         public async Task DeleteVersionAsync(int versionId)
         {
-            var version = await _context.VersionParents.FindAsync(versionId);
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var version = await context.VersionParents.FindAsync(versionId);
             if (version != null)
             {
-                _context.VersionParents.Remove(version);
-                await _context.SaveChangesAsync();
+                context.VersionParents.Remove(version);
+                await context.SaveChangesAsync();
             }
         }
 
         public async Task<List<VpList>> GetVpListAsync()
         {
-            return await _context.VpLists.ToListAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.VpLists.ToListAsync();
         }
 
         public async Task CompleteStep1Async(int versionId, List<VpParent> allocations, IEmailService emailService, IUserService userService)
         {
-            var version = await _context.VersionParents.FindAsync(versionId);
-            if (version == null) return;
-
-            version.Step = "Step2 - Manager Cost Allocation";
-            _context.VersionParents.Update(version);
-
-            foreach (var allocation in allocations)
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            // Wrap in transaction for safety
+            using var transaction = await context.Database.BeginTransactionAsync();
+            try
             {
-                allocation.VersionID = versionId.ToString();
-                allocation.Status = "VPStep1 - VP Manager Values Allocation";
-                _context.VpParents.Add(allocation);
-            }
+                var version = await context.VersionParents.FindAsync(versionId);
+                if (version == null) return;
 
-            await _context.SaveChangesAsync();
+                version.Step = "Step2 - Manager Cost Allocation";
+                context.VersionParents.Update(version);
 
-            foreach (var allocation in allocations)
-            {
-                var user = await userService.GetUserByNameAsync(allocation.VpName ?? "");
-                if (user?.Email != null)
+                foreach (var allocation in allocations)
                 {
-                    string toEmail = "victor.filizola_teixeira@bbraun.com";
-                    string subject = $"Action Required: Budget Allocation for {allocation.VpName}";
-                    string body = $"Dear {allocation.VpName},\n\nA new budget has been allocated to you in the LE Digital system. Please log in to proceed with the manager cost allocation.";
-                    await emailService.SendEmailAsync(toEmail, subject, body);
+                    allocation.VersionID = versionId.ToString();
+                    allocation.Status = "VPStep1 - VP Manager Values Allocation";
+                    context.VpParents.Add(allocation);
                 }
+
+                await context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                // Send emails after successful commit
+                foreach (var allocation in allocations)
+                {
+                    var user = await userService.GetUserByNameAsync(allocation.VpName ?? "");
+                    if (user?.Email != null)
+                    {
+                        string toEmail = "victor.filizola_teixeira@bbraun.com";
+                        string subject = $"Action Required: Budget Allocation for {allocation.VpName}";
+                        string body = $"Dear {allocation.VpName},\n\nA new budget has been allocated to you in the LE Digital system. Please log in to proceed with the manager cost allocation.";
+                        await emailService.SendEmailAsync(toEmail, subject, body);
+                    }
+                }
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw; // Rethrow or handle error
+            }
+        }
+
+        public async Task TrySetVersionStepAsync(int versionId, string newStep)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var version = await context.VersionParents.FindAsync(versionId);
+            if (version != null && version.Step != newStep && version.Step != "Step3 - Cost Center Allocation")
+            {
+                version.Step = newStep;
+                context.VersionParents.Update(version);
+                await context.SaveChangesAsync();
             }
         }
     }

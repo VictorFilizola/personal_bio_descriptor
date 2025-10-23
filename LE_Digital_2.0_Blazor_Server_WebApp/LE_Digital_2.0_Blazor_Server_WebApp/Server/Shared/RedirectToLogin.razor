@@ -5,7 +5,9 @@
     {
         if (firstRender)
         {
-            NavigationManager.NavigateTo("/login", forceLoad: true);
+            // Client-side navigation preserves login state
+            NavigationManager.NavigateTo("/login");
         }
+        await base.OnAfterRenderAsync(firstRender);
     }
 }
