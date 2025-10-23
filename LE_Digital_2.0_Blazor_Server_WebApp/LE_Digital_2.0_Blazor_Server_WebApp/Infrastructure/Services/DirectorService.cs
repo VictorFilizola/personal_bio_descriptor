@@ -16,7 +16,7 @@ namespace LE_Digital_2_Blazor_Server_WebApp.Infrastructure.Services
         private readonly IDbContextFactory<AppDbContext> _contextFactory;
         private readonly ILogger<DirectorService> _logger; // Add logger field
 
-        // Inject ILogger
+        // *** FIX: Inject ILogger here ***
         public DirectorService(IDbContextFactory<AppDbContext> contextFactory, ILogger<DirectorService> logger)
         {
             _contextFactory = contextFactory;
@@ -107,8 +107,7 @@ namespace LE_Digital_2_Blazor_Server_WebApp.Infrastructure.Services
                         var newCostCenterParent = new CostCenterParent
                         {
                             VersionID = versionId.ToString(),
-                            // *** FIX: Save the int ManagerID as a string ***
-                            ManagerID = newManagerParent.ManagerID.ToString(),
+                            ManagerID = newManagerParent.ManagerID.ToString(), // Save as string
                             Status = "Pendente",
                             CostCenterCode = cc.CostCenter,
                             CostCenterName = cc.Denomination,
@@ -152,7 +151,7 @@ namespace LE_Digital_2_Blazor_Server_WebApp.Infrastructure.Services
             }
             catch (Exception ex)
             {
-                // This line now works because _logger is injected
+                // This line now works because _logger is injected and initialized
                 _logger.LogError(ex, "Error during CompleteStep2Async for VpId {VpId}", vpId);
                 await transaction.RollbackAsync();
                 throw;

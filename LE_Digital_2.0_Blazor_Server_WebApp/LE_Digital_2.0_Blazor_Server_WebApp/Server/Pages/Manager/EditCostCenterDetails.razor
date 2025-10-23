@@ -56,10 +56,19 @@ else
         </div>
     </div>
 
+
     <h5 class="mt-4">Budget Allocation (Edit Values Below)</h5>
     <div class="table-container allocation-table-container mb-4">
         <table class="table table-bordered table-sm allocation-table">
             <thead class="table-light">
+                <tr class="percentage-row">
+                    <th class="sticky-left">Month %</th>
+                    @foreach (var month in months)
+                    {
+                        <th class="text-end"><input type="text" class="form-control form-control-sm text-end" value="@GetAllocationMonthPercentage(month).ToString("P1")" readonly /></th>
+                    }
+                    <th class="text-end">100.0%</th>
+                </tr>
                 <tr>
                     <th class="sticky-left">Conta Gerencial</th>
                     @foreach (var month in months)
@@ -103,10 +112,18 @@ else
         </table>
     </div>
 
-    <h5 class="mt-4">Historic Data (@(historicData.FirstOrDefault()?.Year ?? 0)) (Read Only)</h5>
+    <h5 class="mt-4">Historic Data (@(historicData.FirstOrDefault()?.Year ?? 2025)) (Read Only)</h5>
     <div class="table-container historic-table">
         <table class="table table-bordered table-sm">
             <thead class="table-light">
+                <tr class="percentage-row">
+                    <th class="sticky-left">Month %</th>
+                    @foreach (var month in months)
+                    {
+                        <th class="text-end"><input type="text" class="form-control form-control-sm text-end" value="@GetHistoricMonthPercentage(month).ToString("P1")" readonly /></th>
+                    }
+                    <th class="text-end">100.0%</th>
+                </tr>
                 <tr>
                     <th class="sticky-left">Conta Gerencial</th>
                     @foreach (var month in months)
@@ -189,7 +206,13 @@ else
     private CultureInfo ptBR = new CultureInfo("pt-BR");
     private readonly string[] months = { "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December" };
 
-    private decimal UsedTotal => subAllocations?.Sum(GetRowTotal) ?? 0;
+    // *** FIX: Moved these to be class-level fields ***
+    private decimal[] allocationMonthTotals = new decimal[12];
+    private decimal[] historicMonthTotals = new decimal[12];
+    private decimal allocationGrandTotal = 0;
+    private decimal historicGrandTotal = 0;
+
+    private decimal UsedTotal => allocationGrandTotal;
     private decimal RemainingValue => (costCenterParent?.AllocatedValue ?? 0) - UsedTotal;
 
     protected override async Task OnInitializedAsync()
@@ -232,11 +255,8 @@ else
 
 
             loadingMessage = "Fetching template and history...";
-            Logger.LogInformation("Fetching template accounts.");
             templateAccounts = await ManagerService.GetContaGerencialTemplateAsync();
-
-            Logger.LogInformation("Fetching historic data for CC {Code}.", costCenterParent.CostCenterCode);
-            historicData = await ManagerService.GetHistoricDataForCostCenterAsync(costCenterParent.CostCenterCode, 2024);
+            historicData = await ManagerService.GetHistoricDataForCostCenterAsync(costCenterParent.CostCenterCode, 2025); // Using 2025
 
             historicDataGrouped = historicData
                 .GroupBy(h => h.ManagingAccount ?? "Unknown")
@@ -246,16 +266,18 @@ else
             InitializeSubAllocations();
 
             loadingMessage = "Calculating auto-fill...";
-            CalculateAutoFill();
+            CalculateAutoFill(); // This now also calculates historic totals
+
+            loadingMessage = "Calculating current totals...";
+            RecalculateTotals(); // Calculate totals for the (auto-filled) allocation grid
 
             loadingMessage = "";
             Logger.LogInformation("Finished loading data for CostCenterParentId {Id}", CostCenterParentId);
-
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error initializing EditCostCenterDetails page for CC {Id}", CostCenterParentId);
-            errorMessage = $"Error loading data: {ex.Message}. See console log for details.";
+            errorMessage = $"Error loading data: {ex.Message}. Check console log for details.";
         }
         finally
         {
@@ -286,37 +308,38 @@ else
 
     private void CalculateAutoFill()
     {
+        // 1. Calculate TOTAL historic spending per month and grand total
+        // These are now class-level fields, so we just assign to them
+        historicMonthTotals = new decimal[12];
+        for (int i = 0; i < 12; i++)
+        {
+            historicMonthTotals[i] = historicData.Sum(h => GetMonthValue(h, i) ?? 0);
+        }
+        historicGrandTotal = historicMonthTotals.Sum();
+
         if (historicData == null || !historicData.Any() || costCenterParent?.AllocatedValue == null || costCenterParent.AllocatedValue <= 0)
         {
             Logger.LogInformation("Skipping auto-fill: No valid historic data or zero/negative allocated value ({Value}).", costCenterParent?.AllocatedValue);
             return;
         }
 
-        Logger.LogInformation("Starting auto-fill calculation.");
+        Logger.LogInformation("Starting auto-fill calculation. Historic Total: {HistTotal}", historicGrandTotal);
         var totalAllocated = costCenterParent.AllocatedValue.Value;
 
-        decimal grandHistoricTotal = 0;
-        foreach (var h in historicData)
-        {
-            for (int i = 0; i < 12; i++)
-            {
-                grandHistoricTotal += GetMonthValue(h, i) ?? 0;
-            }
-        }
-
-        if (grandHistoricTotal <= 0)
+        if (historicGrandTotal <= 0)
         {
             Logger.LogInformation("Skipping auto-fill: Grand historic total is zero or negative.");
             return;
         }
 
-        decimal[] monthlyHistoricTotals = new decimal[12];
-        for (int i = 0; i < 12; i++) { monthlyHistoricTotals[i] = historicData.Sum(h => GetMonthValue(h, i) ?? 0); }
-
+        // 2. Calculate target budget allocation PER MONTH
         decimal[] monthlyBudgetTargets = new decimal[12];
-        for (int i = 0; i < 12; i++) { monthlyBudgetTargets[i] = totalAllocated * (monthlyHistoricTotals[i] / grandHistoricTotal); }
-        Logger.LogInformation("Monthly Budget Targets: {Targets}", string.Join(", ", monthlyBudgetTargets.Select(d => d.ToString("N2"))));
+        for (int i = 0; i < 12; i++)
+        {
+            monthlyBudgetTargets[i] = totalAllocated * (historicMonthTotals[i] / historicGrandTotal);
+        }
 
+        // 3. Calculate historic percentage of each account WITHIN each month
         var accountMonthlyPercentages = new Dictionary<string, decimal[]>();
         foreach (var accountGroup in historicDataGrouped)
         {
@@ -326,10 +349,12 @@ else
             for (int i = 0; i < 12; i++)
             {
                 decimal accountMonthlySum = accountDataList.Sum(h => GetMonthValue(h, i) ?? 0);
-                accountMonthlyPercentages[accountName][i] = (monthlyHistoricTotals[i] > 0) ? (accountMonthlySum / monthlyHistoricTotals[i]) : 0;
+                // *** THIS IS THE CORRECTED LINE ***
+                accountMonthlyPercentages[accountName][i] = (historicMonthTotals[i] > 0) ? (accountMonthlySum / historicMonthTotals[i]) : 0;
             }
         }
 
+        // 4. Apply percentages to fill the subAllocations grid and ROUND
         decimal runningTotalCheck = 0;
         foreach (var sub in subAllocations)
         {
@@ -349,27 +374,21 @@ else
                 sub.December = Math.Round(monthlyBudgetTargets[11] * percentages[11]);
                 runningTotalCheck += GetRowTotal(sub);
             }
-            else { Logger.LogDebug("Account {AccountName} in template but not found in history for CC {Code}", sub.ContaGerencial, costCenterParent.CostCenterCode); }
         }
-        Logger.LogInformation("Auto-fill complete. Calculated initial UsedTotal: {Total}", UsedTotal);
-        Logger.LogInformation("Running Total Check after rounding: {Total}", runningTotalCheck);
+        Logger.LogInformation("Auto-fill complete. Running Total Check after rounding: {Total}", runningTotalCheck);
 
         AdjustRoundingDifference(totalAllocated, runningTotalCheck);
-
-        RecalculateTotals();
     }
 
     private void AdjustRoundingDifference(decimal targetTotal, decimal currentTotal)
     {
         decimal difference = targetTotal - currentTotal;
         Logger.LogInformation("Rounding difference: {Difference}", difference);
-
         if (Math.Abs(difference) < 1.0m || !subAllocations.Any()) return;
 
         var firstSubWithAllocation = subAllocations.FirstOrDefault(s => GetRowTotal(s) != 0);
         if (firstSubWithAllocation != null)
         {
-            // Add difference to the first month of the first row that has data
             firstSubWithAllocation.January = (firstSubWithAllocation.January ?? 0) + difference;
             Logger.LogInformation("Adjusted difference on {Account} in January.", firstSubWithAllocation.ContaGerencial);
         }
@@ -384,14 +403,53 @@ else
     }
 
     private decimal GetRowTotal(CostCenterSub sub) { return (sub.January ?? 0) + (sub.February ?? 0) + (sub.March ?? 0) + (sub.April ?? 0) + (sub.May ?? 0) + (sub.June ?? 0) + (sub.July ?? 0) + (sub.August ?? 0) + (sub.September ?? 0) + (sub.October ?? 0) + (sub.November ?? 0) + (sub.December ?? 0); }
-    private decimal GetColumnTotal(string monthName) { if (subAllocations == null) return 0; int monthIndex = Array.IndexOf(months, monthName); if (monthIndex < 0) return 0; return subAllocations.Sum(sub => GetMonthValue(sub, monthIndex) ?? 0); }
+    private decimal GetColumnTotal(string monthName) { int monthIndex = Array.IndexOf(months, monthName); if (monthIndex < 0) return 0; return allocationMonthTotals[monthIndex]; }
     private decimal GetHistoricValue(string contaGerencial, string monthName) { int monthIndex = Array.IndexOf(months, monthName); if (monthIndex < 0 || !historicDataGrouped.TryGetValue(contaGerencial, out var dataList)) return 0; return dataList.Sum(h => GetMonthValue(h, monthIndex) ?? 0); }
     private decimal GetHistoricRowTotal(string contaGerencial) { if (!historicDataGrouped.TryGetValue(contaGerencial, out var dataList)) return 0; decimal total = 0; for (int i = 0; i < 12; i++) { total += dataList.Sum(h => GetMonthValue(h, i) ?? 0); } return total; }
-    private decimal GetHistoricColumnTotal(string monthName) { int monthIndex = Array.IndexOf(months, monthName); if (monthIndex < 0 || historicData == null) return 0; return historicData.Sum(h => GetMonthValue(h, monthIndex) ?? 0); }
-    private decimal GetHistoricGrandTotal() { if (historicData == null) return 0; decimal total = 0; for (int i = 0; i < 12; i++) { total += historicData.Sum(h => GetMonthValue(h, i) ?? 0); } return total; }
-    private decimal? GetMonthValue(object dataObject, int monthIndex) { if (dataObject == null || monthIndex < 0 || monthIndex >= months.Length) return 0; var propertyName = months[monthIndex]; try { var property = dataObject.GetType().GetProperty(propertyName); var value = property?.GetValue(dataObject); if (value is decimal d) return d >= 0 ? d : 0; if (value is double db) return (decimal)db >= 0 ? (decimal)db : 0; if (value is int i) return (decimal)i >= 0 ? (decimal)i : 0; if (value is string s && decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal sd)) return sd >= 0 ? sd : 0; } catch (Exception ex) { Logger.LogError(ex, "Error getting month value for property {PropName} on object type {TypeName}", propertyName, dataObject.GetType().Name); } return 0; }
+    private decimal GetHistoricColumnTotal(string monthName) { int monthIndex = Array.IndexOf(months, monthName); if (monthIndex < 0) return 0; return historicMonthTotals[monthIndex]; }
+    private decimal GetHistoricGrandTotal() => historicGrandTotal;
 
-    private void RecalculateTotals() { StateHasChanged(); }
+    private decimal? GetMonthValue(object dataObject, int monthIndex)
+    {
+        if (dataObject == null || monthIndex < 0 || monthIndex >= months.Length) return 0;
+        var propertyName = months[monthIndex];
+        try
+        {
+            var property = dataObject.GetType().GetProperty(propertyName);
+            var value = property?.GetValue(dataObject);
+            if (value is decimal d) return d >= 0 ? d : 0;
+            if (value is double db) return (decimal)db >= 0 ? (decimal)db : 0; // Cast double? to decimal?
+            if (value is int i_val) return (decimal)i_val >= 0 ? (decimal)i_val : 0; // *** FIX: Changed variable name from 'i' ***
+            if (value is string s && decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal sd)) return sd >= 0 ? sd : 0;
+        }
+        catch (Exception ex) { Logger.LogError(ex, "Error getting month value for property {PropName} on object type {TypeName}", propertyName, dataObject.GetType().Name); }
+        return 0;
+    }
+
+    private decimal GetAllocationMonthPercentage(string monthName)
+    {
+        if (allocationGrandTotal == 0) return 0;
+        return GetColumnTotal(monthName) / allocationGrandTotal;
+    }
+
+    private decimal GetHistoricMonthPercentage(string monthName)
+    {
+        if (historicGrandTotal == 0) return 0;
+        return GetHistoricColumnTotal(monthName) / historicGrandTotal;
+    }
+
+
+    private void RecalculateTotals()
+    {
+        allocationGrandTotal = 0;
+        for (int i = 0; i < 12; i++)
+        {
+            var monthTotal = subAllocations.Sum(sub => GetMonthValue(sub, i) ?? 0);
+            allocationMonthTotals[i] = monthTotal;
+            allocationGrandTotal += monthTotal;
+        }
+        StateHasChanged();
+    }
 
     private async Task OnFinishClicked()
     {
@@ -406,7 +464,8 @@ else
             return;
         }
 
-        if (currentUsedTotal < currentAllocated)
+        // Use rounding for comparison to avoid floating point issues
+        if (Math.Round(currentUsedTotal, 2) < Math.Round(currentAllocated, 2))
         {
             showWarningPopup = true;
         }

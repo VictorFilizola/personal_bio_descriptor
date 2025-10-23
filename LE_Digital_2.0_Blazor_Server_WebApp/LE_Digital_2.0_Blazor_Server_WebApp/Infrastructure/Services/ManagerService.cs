@@ -90,17 +90,19 @@ namespace LE_Digital_2_Blazor_Server_WebApp.Infrastructure.Services
                 .ToListAsync();
         }
 
-        public async Task<List<HistoricData>> GetHistoricDataForCostCenterAsync(string costCenterCode, int year = 2024)
+        public async Task<List<HistoricData>> GetHistoricDataForCostCenterAsync(string costCenterCode, int year = 2025) // Default year is now 2025
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
             _logger.LogInformation("Fetching historic data for CostCenterCode: {Code}, Year: {Year}", costCenterCode, year);
+
             var data = await context.HistoricData
                 .Where(h => h.CentroCusto == costCenterCode
-                         && h.Year == year
+                         && h.Year == year // Using the year parameter (default 2025)
                          && h.ManagingAccount != "Personnel Costs"
                          && h.ManagingAccount != "Depreciation")
                 .OrderBy(h => h.ManagingAccount)
                 .ToListAsync();
+
             _logger.LogInformation("Fetched {Count} historic data records.", data.Count);
             return data;
         }
