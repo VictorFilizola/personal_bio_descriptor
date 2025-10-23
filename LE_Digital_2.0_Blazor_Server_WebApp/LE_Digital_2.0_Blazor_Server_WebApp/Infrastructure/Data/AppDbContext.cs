@@ -15,6 +15,7 @@ namespace LE_Digital_2_Blazor_Server_WebApp.Infrastructure.Data
         public DbSet<ManagerParent> ManagerParents { get; set; }
         public DbSet<CostCenterParent> CostCenterParents { get; set; }
         public DbSet<CostCenterSub> CostCenterSubs { get; set; }
+        public DbSet<CostCenterDesignation> CostCenterDesignations { get; set; }
 
         // Add DbSet for the Historic Data View
         public DbSet<HistoricData> HistoricData { get; set; }

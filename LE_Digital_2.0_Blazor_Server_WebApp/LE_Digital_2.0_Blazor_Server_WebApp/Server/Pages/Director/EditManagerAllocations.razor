@@ -4,6 +4,7 @@
 @using System.Globalization
 @using LE_Digital_2_Blazor_Server_WebApp.Core.Models
 @using LE_Digital_2_Blazor_Server_WebApp.Core.Interfaces
+@using System.Security.Claims @* Add this line *@
 @inject IDirectorService DirectorService
 @inject IUserService UserService
 @inject IEmailService EmailService
@@ -11,6 +12,7 @@
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthStateProvider
 
+@* Rest of the HTML remains the same *@
 @if (vpDetails == null || managerAllocations == null)
 {
     <p><em>Loading allocation details...</em></p>
@@ -61,6 +63,7 @@ else
     </div>
 }
 
+
 @code {
     [Parameter]
     public int VpId { get; set; }
@@ -68,18 +71,19 @@ else
     private VpParent? vpDetails;
     private List<ManagerAllocation>? managerAllocations;
     private string? errorMessage;
-    private ClaimsPrincipal? currentUser;
+    // Remove the ClaimsPrincipal? currentUser; line
 
     private decimal currentTotal => managerAllocations?.Sum(a => a.AllocatedInvestment) ?? 0;
 
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        currentUser = authState.User;
+        var user = authState.User; // Get user principal directly
 
-        if (currentUser?.Identity?.IsAuthenticated ?? false)
+        if (user?.Identity?.IsAuthenticated ?? false)
         {
-            vpDetails = await DirectorService.GetVpAllocationDetailsAsync(VpId, currentUser);
+            // Pass the non-nullable user principal
+            vpDetails = await DirectorService.GetVpAllocationDetailsAsync(VpId, user);
 
             if (vpDetails != null && !string.IsNullOrEmpty(vpDetails.VpName))
             {
@@ -88,9 +92,12 @@ else
             }
             else
             {
-                // Handle case where VP details not found or user is not authorized for this VpId
                 NavigationManager.NavigateTo("/director/dashboard");
             }
+        }
+        else
+        {
+            NavigationManager.NavigateTo("/login"); // Redirect if not authenticated
         }
     }
 
@@ -109,20 +116,19 @@ else
         }
         if (!int.TryParse(vpDetails.VersionID, out int versionId))
         {
-             errorMessage = "Invalid Version ID format.";
-             return;
+            errorMessage = "Invalid Version ID format.";
+            return;
         }
 
         try
         {
             await DirectorService.CompleteStep2Async(vpDetails.VpID, versionId, vpDetails.VpName ?? "", managerAllocations, EmailService, UserService, VersionService);
-            NavigationManager.NavigateTo("/director/dashboard"); // Go back to dashboard after success
+            NavigationManager.NavigateTo("/director/dashboard");
         }
         catch (Exception ex)
         {
-            // Log the exception details (ex.ToString())
             errorMessage = "An error occurred while saving the allocations. Please try again or contact support.";
-            // Optionally: You might want to reload data here if the save failed partially
+            // Consider logging ex.ToString() here
         }
     }
 }

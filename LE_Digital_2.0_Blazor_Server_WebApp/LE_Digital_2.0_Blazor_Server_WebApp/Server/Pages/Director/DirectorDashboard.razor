@@ -3,6 +3,7 @@
 
 @using LE_Digital_2_Blazor_Server_WebApp.Core.Models
 @using LE_Digital_2_Blazor_Server_WebApp.Core.Interfaces
+@using System.Security.Claims @* Add this line *@
 @inject IDirectorService DirectorService
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthStateProvider
@@ -19,6 +20,7 @@ else if (!pendingAllocations.Any())
 }
 else
 {
+    @* Table remains the same *@
     <table class="table table-striped">
         <thead>
             <tr>
@@ -50,15 +52,20 @@ else
 
 @code {
     private List<VpParent>? pendingAllocations;
-    private ClaimsPrincipal? currentUser;
+    // Remove the ClaimsPrincipal? currentUser; line
 
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        currentUser = authState.User;
-        if (currentUser?.Identity?.IsAuthenticated ?? false)
+        var user = authState.User; // Get the user principal directly
+        if (user?.Identity?.IsAuthenticated ?? false)
         {
-            pendingAllocations = await DirectorService.GetPendingAllocationsAsync(currentUser);
+            // Pass the non-nullable user principal
+            pendingAllocations = await DirectorService.GetPendingAllocationsAsync(user);
+        }
+        else
+        {
+            pendingAllocations = new List<VpParent>(); // Initialize if not authenticated
         }
     }
 
