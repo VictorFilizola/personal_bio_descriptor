@@ -5,12 +5,9 @@ namespace LE_Digital_2_Blazor_Server_WebApp.Infrastructure.Data
 {
     public class AppDbContext : DbContext
     {
-        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
-        {
-        }
+        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
-        // Add a DbSet for each model class.
-        // This tells EF Core that these correspond to tables in database.
+        // DbSets for your tables
         public DbSet<User> Users { get; set; }
         public DbSet<VersionParent> VersionParents { get; set; }
         public DbSet<VpParent> VpParents { get; set; }
@@ -19,8 +16,21 @@ namespace LE_Digital_2_Blazor_Server_WebApp.Infrastructure.Data
         public DbSet<CostCenterParent> CostCenterParents { get; set; }
         public DbSet<CostCenterSub> CostCenterSubs { get; set; }
 
-        // These tables from from the schema are raw data/templates.
-        public DbSet<CostCenterDesignation> CostCenterDesignations { get; set; }
-        public DbSet<CostCenterGridTemplate> CostCenterGridTemplates { get; set; }
+        // Add DbSet for the Historic Data View
+        public DbSet<HistoricData> HistoricData { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            // Configure the HistoricData model to map to the 'le_historic' view
+            modelBuilder.Entity<HistoricData>(entity =>
+            {
+                entity.HasNoKey(); // Reinforce that it's keyless
+                entity.ToView("le_historic"); // Specify the view name
+            });
+
+            // You can add other specific configurations for your tables here if needed
+        }
     }
 }

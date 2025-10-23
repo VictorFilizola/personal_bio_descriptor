@@ -1,5 +1,69 @@
-﻿<h3>DirectorDashboard</h3>
+﻿@page "/director/dashboard"
+@attribute [Authorize(Roles = "Director, Master")]
+
+@using LE_Digital_2_Blazor_Server_WebApp.Core.Models
+@using LE_Digital_2_Blazor_Server_WebApp.Core.Interfaces
+@inject IDirectorService DirectorService
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
+
+<h3>Director Dashboard - Pending Allocations</h3>
+
+@if (pendingAllocations == null)
+{
+    <p><em>Loading your tasks...</em></p>
+}
+else if (!pendingAllocations.Any())
+{
+    <div class="alert alert-success">You have no pending budget allocations.</div>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Version ID</th>
+                <th>VP Name</th>
+                <th>Total Investment</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var alloc in pendingAllocations)
+            {
+                <tr>
+                    <td>@alloc.VersionID</td>
+                    <td>@alloc.VpName</td>
+                    <td>@alloc.TotalInvestment?.ToString("C")</td>
+                    <td><span class="badge bg-warning">@alloc.Status</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" @onclick="() => NavigateToAllocation(alloc.VpID)">
+                            Allocate to Managers
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
 
 @code {
+    private List<VpParent>? pendingAllocations;
+    private ClaimsPrincipal? currentUser;
 
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        currentUser = authState.User;
+        if (currentUser?.Identity?.IsAuthenticated ?? false)
+        {
+            pendingAllocations = await DirectorService.GetPendingAllocationsAsync(currentUser);
+        }
+    }
+
+    void NavigateToAllocation(int vpId)
+    {
+        NavigationManager.NavigateTo($"/director/allocate-managers/{vpId}");
+    }
 }

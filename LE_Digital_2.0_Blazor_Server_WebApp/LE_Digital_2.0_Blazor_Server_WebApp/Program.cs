@@ -20,11 +20,11 @@ builder.Services.AddDevExpressBlazor();
 
 // Register your custom services
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthenticationStateProvider>();
-builder.Services.AddScoped<IUserService, UserService>(); // This now correctly points to the Repositories.UserService
+builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IVersionService, VersionService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<AppState>();
-
+builder.Services.AddScoped<IDirectorService, DirectorService>(); 
 
 var app = builder.Build();
 

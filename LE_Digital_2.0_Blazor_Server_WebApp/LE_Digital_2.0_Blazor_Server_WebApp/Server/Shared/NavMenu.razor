@@ -1,7 +1,12 @@
 ﻿<div class="sidebar @StateCssClass">
 <DxTreeView AllowSelectNodes="true" CssClass="app-sidebar">
     <Nodes>
-            <DxTreeViewNode Text="Home" NavigateUrl="controller/manage-versions" IconCssClass="oi oi-home"></DxTreeViewNode>
+        <DxTreeViewNode Text="Home" NavigateUrl="controller/manage-versions" IconCssClass="oi oi-home"></DxTreeViewNode>
+        <AuthorizeView Roles="Director, Master">
+            <Authorized>
+                <DxTreeViewNode Text="Director Dashboard" NavigateUrl="director/dashboard" IconCssClass="oi oi-briefcase"></DxTreeViewNode>
+            </Authorized>
+        </AuthorizeView>
     </Nodes>
 </DxTreeView>
 </div>

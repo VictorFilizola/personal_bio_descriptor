@@ -1,0 +1,128 @@
+﻿@page "/director/allocate-managers/{VpId:int}"
+@attribute [Authorize(Roles = "Director, Master")]
+
+@using System.Globalization
+@using LE_Digital_2_Blazor_Server_WebApp.Core.Models
+@using LE_Digital_2_Blazor_Server_WebApp.Core.Interfaces
+@inject IDirectorService DirectorService
+@inject IUserService UserService
+@inject IEmailService EmailService
+@inject IVersionService VersionService
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
+
+@if (vpDetails == null || managerAllocations == null)
+{
+    <p><em>Loading allocation details...</em></p>
+}
+else
+{
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3>Allocate Budget for @vpDetails.VpName (Version @vpDetails.VersionID)</h3>
+        <button class="btn btn-success" @onclick="FinishStep2" disabled="@(!IsSaveable())">
+            <span class="oi oi-check" aria-hidden="true"></span> Finish Step 2 & Notify Managers
+        </button>
+    </div>
+    <hr />
+
+    <div class="alert alert-info d-flex justify-content-between">
+        <strong>Total to Allocate: @vpDetails.TotalInvestment?.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))</strong>
+        <strong>Currently Allocated: <span class="@(IsSaveable() ? "text-success" : "text-danger")">@currentTotal.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))</span></strong>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+
+    <div class="table-responsive">
+        <table class="table table-bordered">
+            <thead class="table-light">
+                <tr>
+                    <th>Manager Name (Gerente)</th>
+                    <th style="width: 250px;">Value Allocated (InvestimentoGerencia)</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var allocation in managerAllocations)
+                {
+                    <tr>
+                        <td>@allocation.ManagerName</td>
+                        <td>
+                            <div class="input-group">
+                                <span class="input-group-text">R$</span>
+                                <input type="number" step="0.01" class="form-control" @bind="allocation.AllocatedInvestment" @bind:event="oninput" />
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int VpId { get; set; }
+
+    private VpParent? vpDetails;
+    private List<ManagerAllocation>? managerAllocations;
+    private string? errorMessage;
+    private ClaimsPrincipal? currentUser;
+
+    private decimal currentTotal => managerAllocations?.Sum(a => a.AllocatedInvestment) ?? 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        currentUser = authState.User;
+
+        if (currentUser?.Identity?.IsAuthenticated ?? false)
+        {
+            vpDetails = await DirectorService.GetVpAllocationDetailsAsync(VpId, currentUser);
+
+            if (vpDetails != null && !string.IsNullOrEmpty(vpDetails.VpName))
+            {
+                var managers = await DirectorService.GetManagersForVpAsync(vpDetails.VpName);
+                managerAllocations = managers.Select(m => new ManagerAllocation { ManagerName = m, AllocatedInvestment = 0 }).ToList();
+            }
+            else
+            {
+                // Handle case where VP details not found or user is not authorized for this VpId
+                NavigationManager.NavigateTo("/director/dashboard");
+            }
+        }
+    }
+
+    private bool IsSaveable()
+    {
+        return vpDetails != null && managerAllocations != null && currentTotal == vpDetails.TotalInvestment;
+    }
+
+    private async Task FinishStep2()
+    {
+        errorMessage = null;
+        if (vpDetails == null || managerAllocations == null || !IsSaveable())
+        {
+            errorMessage = "The total allocated value is different than the investment assigned to you. Please adjust the values.";
+            return;
+        }
+        if (!int.TryParse(vpDetails.VersionID, out int versionId))
+        {
+             errorMessage = "Invalid Version ID format.";
+             return;
+        }
+
+        try
+        {
+            await DirectorService.CompleteStep2Async(vpDetails.VpID, versionId, vpDetails.VpName ?? "", managerAllocations, EmailService, UserService, VersionService);
+            NavigationManager.NavigateTo("/director/dashboard"); // Go back to dashboard after success
+        }
+        catch (Exception ex)
+        {
+            // Log the exception details (ex.ToString())
+            errorMessage = "An error occurred while saving the allocations. Please try again or contact support.";
+            // Optionally: You might want to reload data here if the save failed partially
+        }
+    }
+}
