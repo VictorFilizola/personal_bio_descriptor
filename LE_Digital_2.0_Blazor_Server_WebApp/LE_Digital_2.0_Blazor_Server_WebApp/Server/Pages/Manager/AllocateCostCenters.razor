@@ -166,6 +166,15 @@ else
             return;
         }
 
+        // *** FIX: Add null check for user ***
+        if (user == null)
+        {
+            Logger.LogError("User principal is null in OnInitializedAsync.");
+            errorMessage = "Authentication error occurred.";
+            return;
+        }
+        managerTask = await ManagerService.GetManagerTaskDetailsAsync(ManagerParentId, user);
+
         managerTask = await ManagerService.GetManagerTaskDetailsAsync(ManagerParentId, user);
         if (managerTask == null)
         {

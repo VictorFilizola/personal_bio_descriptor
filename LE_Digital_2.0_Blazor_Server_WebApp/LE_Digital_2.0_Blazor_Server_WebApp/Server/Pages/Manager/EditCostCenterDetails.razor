@@ -56,7 +56,6 @@ else
         </div>
     </div>
 
-
     <h5 class="mt-4">Budget Allocation (Edit Values Below)</h5>
     <div class="table-container allocation-table-container mb-4">
         <table class="table table-bordered table-sm allocation-table">
@@ -75,19 +74,18 @@ else
                 {
                     <tr>
                         <td class="sticky-left">@sub.ContaGerencial</td>
-                        @* --- Removed explicit @oninput --- *@
-                        <td class="text-end"><input type="number" step="1" min="0" class="form-control form-control-sm text-end" @bind="sub.January" @bind:event="oninput" /></td>
-                        <td class="text-end"><input type="number" step="1" min="0" class="form-control form-control-sm text-end" @bind="sub.February" @bind:event="oninput" /></td>
-                        <td class="text-end"><input type="number" step="1" min="0" class="form-control form-control-sm text-end" @bind="sub.March" @bind:event="oninput" /></td>
-                        <td class="text-end"><input type="number" step="1" min="0" class="form-control form-control-sm text-end" @bind="sub.April" @bind:event="oninput" /></td>
-                        <td class="text-end"><input type="number" step="1" min="0" class="form-control form-control-sm text-end" @bind="sub.May" @bind:event="oninput" /></td>
-                        <td class="text-end"><input type="number" step="1" min="0" class="form-control form-control-sm text-end" @bind="sub.June" @bind:event="oninput" /></td>
-                        <td class="text-end"><input type="number" step="1" min="0" class="form-control form-control-sm text-end" @bind="sub.July" @bind:event="oninput" /></td>
-                        <td class="text-end"><input type="number" step="1" min="0" class="form-control form-control-sm text-end" @bind="sub.August" @bind:event="oninput" /></td>
-                        <td class="text-end"><input type="number" step="1" min="0" class="form-control form-control-sm text-end" @bind="sub.September" @bind:event="oninput" /></td>
-                        <td class="text-end"><input type="number" step="1" min="0" class="form-control form-control-sm text-end" @bind="sub.October" @bind:event="oninput" /></td>
-                        <td class="text-end"><input type="number" step="1" min="0" class="form-control form-control-sm text-end" @bind="sub.November" @bind:event="oninput" /></td>
-                        <td class="text-end"><input type="number" step="1" min="0" class="form-control form-control-sm text-end" @bind="sub.December" @bind:event="oninput" /></td>
+                        <td class="text-end"><input type="number" step="1" min="0" class="form-control form-control-sm text-end" @bind="sub.January" @bind:after="RecalculateTotals" /></td>
+                        <td class="text-end"><input type="number" step="1" min="0" class="form-control form-control-sm text-end" @bind="sub.February" @bind:after="RecalculateTotals" /></td>
+                        <td class="text-end"><input type="number" step="1" min="0" class="form-control form-control-sm text-end" @bind="sub.March" @bind:after="RecalculateTotals" /></td>
+                        <td class="text-end"><input type="number" step="1" min="0" class="form-control form-control-sm text-end" @bind="sub.April" @bind:after="RecalculateTotals" /></td>
+                        <td class="text-end"><input type="number" step="1" min="0" class="form-control form-control-sm text-end" @bind="sub.May" @bind:after="RecalculateTotals" /></td>
+                        <td class="text-end"><input type="number" step="1" min="0" class="form-control form-control-sm text-end" @bind="sub.June" @bind:after="RecalculateTotals" /></td>
+                        <td class="text-end"><input type="number" step="1" min="0" class="form-control form-control-sm text-end" @bind="sub.July" @bind:after="RecalculateTotals" /></td>
+                        <td class="text-end"><input type="number" step="1" min="0" class="form-control form-control-sm text-end" @bind="sub.August" @bind:after="RecalculateTotals" /></td>
+                        <td class="text-end"><input type="number" step="1" min="0" class="form-control form-control-sm text-end" @bind="sub.September" @bind:after="RecalculateTotals" /></td>
+                        <td class="text-end"><input type="number" step="1" min="0" class="form-control form-control-sm text-end" @bind="sub.October" @bind:after="RecalculateTotals" /></td>
+                        <td class="text-end"><input type="number" step="1" min="0" class="form-control form-control-sm text-end" @bind="sub.November" @bind:after="RecalculateTotals" /></td>
+                        <td class="text-end"><input type="number" step="1" min="0" class="form-control form-control-sm text-end" @bind="sub.December" @bind:after="RecalculateTotals" /></td>
                         <td class="text-end fw-bold">@GetRowTotal(sub).ToString("N0", ptBR)</td>
                     </tr>
                 }
@@ -178,14 +176,12 @@ else
     [Parameter]
     public int CostCenterParentId { get; set; }
 
-    // Data Properties
     private CostCenterParent? costCenterParent;
     private List<CostCenterSub> subAllocations = new List<CostCenterSub>();
     private List<CostCenterGridTemplate> templateAccounts = new List<CostCenterGridTemplate>();
     private List<HistoricData> historicData = new List<HistoricData>();
     private Dictionary<string, List<HistoricData>> historicDataGrouped = new Dictionary<string, List<HistoricData>>();
 
-    // State & UI Properties
     private bool isLoading = true;
     private string loadingMessage = "";
     private string? errorMessage;
@@ -193,7 +189,6 @@ else
     private CultureInfo ptBR = new CultureInfo("pt-BR");
     private readonly string[] months = { "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December" };
 
-    // Calculated Properties
     private decimal UsedTotal => subAllocations?.Sum(GetRowTotal) ?? 0;
     private decimal RemainingValue => (costCenterParent?.AllocatedValue ?? 0) - UsedTotal;
 
@@ -209,7 +204,6 @@ else
             NavigationManager.NavigateTo("/login");
             return;
         }
-        // Add null check before passing user
         if (user == null)
         {
             Logger.LogError("User principal is null in OnInitializedAsync for CC {Id}", CostCenterParentId);
@@ -300,15 +294,21 @@ else
 
         Logger.LogInformation("Starting auto-fill calculation.");
         var totalAllocated = costCenterParent.AllocatedValue.Value;
-        decimal grandHistoricTotal = historicData.Sum(h => (GetMonthValue(h, 0) ?? 0) + (GetMonthValue(h, 1) ?? 0) + (GetMonthValue(h, 2) ?? 0) + (GetMonthValue(h, 3) ?? 0) + (GetMonthValue(h, 4) ?? 0) + (GetMonthValue(h, 5) ?? 0) + (GetMonthValue(h, 6) ?? 0) + (GetMonthValue(h, 7) ?? 0) + (GetMonthValue(h, 8) ?? 0) + (GetMonthValue(h, 9) ?? 0) + (GetMonthValue(h, 10) ?? 0) + (GetMonthValue(h, 11) ?? 0));
 
+        decimal grandHistoricTotal = 0;
+        foreach (var h in historicData)
+        {
+            for (int i = 0; i < 12; i++)
+            {
+                grandHistoricTotal += GetMonthValue(h, i) ?? 0;
+            }
+        }
 
         if (grandHistoricTotal <= 0)
         {
             Logger.LogInformation("Skipping auto-fill: Grand historic total is zero or negative.");
             return;
         }
-
 
         decimal[] monthlyHistoricTotals = new decimal[12];
         for (int i = 0; i < 12; i++) { monthlyHistoricTotals[i] = historicData.Sum(h => GetMonthValue(h, i) ?? 0); }
@@ -354,52 +354,46 @@ else
         Logger.LogInformation("Auto-fill complete. Calculated initial UsedTotal: {Total}", UsedTotal);
         Logger.LogInformation("Running Total Check after rounding: {Total}", runningTotalCheck);
 
-        // Optional: Distribute rounding difference here if needed
         AdjustRoundingDifference(totalAllocated, runningTotalCheck);
 
         RecalculateTotals();
     }
 
-    // --- Helper methods ---
     private void AdjustRoundingDifference(decimal targetTotal, decimal currentTotal)
     {
         decimal difference = targetTotal - currentTotal;
         Logger.LogInformation("Rounding difference: {Difference}", difference);
 
-        if (Math.Abs(difference) < 1.0m || !subAllocations.Any()) return; // Ignore small differences or empty list
+        if (Math.Abs(difference) < 1.0m || !subAllocations.Any()) return;
 
-        // Simple strategy: Add/subtract difference to the January value of the first account that has a non-zero total
         var firstSubWithAllocation = subAllocations.FirstOrDefault(s => GetRowTotal(s) != 0);
         if (firstSubWithAllocation != null)
         {
+            // Add difference to the first month of the first row that has data
             firstSubWithAllocation.January = (firstSubWithAllocation.January ?? 0) + difference;
             Logger.LogInformation("Adjusted difference on {Account} in January.", firstSubWithAllocation.ContaGerencial);
         }
         else
         {
-            // If all rows are zero, add to the first row's January
             if (subAllocations.Any())
             {
                 subAllocations[0].January = (subAllocations[0].January ?? 0) + difference;
                 Logger.LogInformation("Adjusted difference on first account {Account} in January.", subAllocations[0].ContaGerencial);
             }
         }
-        RecalculateTotals();
     }
 
+    private decimal GetRowTotal(CostCenterSub sub) { return (sub.January ?? 0) + (sub.February ?? 0) + (sub.March ?? 0) + (sub.April ?? 0) + (sub.May ?? 0) + (sub.June ?? 0) + (sub.July ?? 0) + (sub.August ?? 0) + (sub.September ?? 0) + (sub.October ?? 0) + (sub.November ?? 0) + (sub.December ?? 0); }
+    private decimal GetColumnTotal(string monthName) { if (subAllocations == null) return 0; int monthIndex = Array.IndexOf(months, monthName); if (monthIndex < 0) return 0; return subAllocations.Sum(sub => GetMonthValue(sub, monthIndex) ?? 0); }
+    private decimal GetHistoricValue(string contaGerencial, string monthName) { int monthIndex = Array.IndexOf(months, monthName); if (monthIndex < 0 || !historicDataGrouped.TryGetValue(contaGerencial, out var dataList)) return 0; return dataList.Sum(h => GetMonthValue(h, monthIndex) ?? 0); }
+    private decimal GetHistoricRowTotal(string contaGerencial) { if (!historicDataGrouped.TryGetValue(contaGerencial, out var dataList)) return 0; decimal total = 0; for (int i = 0; i < 12; i++) { total += dataList.Sum(h => GetMonthValue(h, i) ?? 0); } return total; }
+    private decimal GetHistoricColumnTotal(string monthName) { int monthIndex = Array.IndexOf(months, monthName); if (monthIndex < 0 || historicData == null) return 0; return historicData.Sum(h => GetMonthValue(h, monthIndex) ?? 0); }
+    private decimal GetHistoricGrandTotal() { if (historicData == null) return 0; decimal total = 0; for (int i = 0; i < 12; i++) { total += historicData.Sum(h => GetMonthValue(h, i) ?? 0); } return total; }
+    private decimal? GetMonthValue(object dataObject, int monthIndex) { if (dataObject == null || monthIndex < 0 || monthIndex >= months.Length) return 0; var propertyName = months[monthIndex]; try { var property = dataObject.GetType().GetProperty(propertyName); var value = property?.GetValue(dataObject); if (value is decimal d) return d >= 0 ? d : 0; if (value is double db) return (decimal)db >= 0 ? (decimal)db : 0; if (value is int i) return (decimal)i >= 0 ? (decimal)i : 0; if (value is string s && decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal sd)) return sd >= 0 ? sd : 0; } catch (Exception ex) { Logger.LogError(ex, "Error getting month value for property {PropName} on object type {TypeName}", propertyName, dataObject.GetType().Name); } return 0; }
 
-    private decimal GetRowTotal(CostCenterSub sub) { /* ... same as before ... */ return (sub.January ?? 0) + (sub.February ?? 0) + (sub.March ?? 0) + (sub.April ?? 0) + (sub.May ?? 0) + (sub.June ?? 0) + (sub.July ?? 0) + (sub.August ?? 0) + (sub.September ?? 0) + (sub.October ?? 0) + (sub.November ?? 0) + (sub.December ?? 0); }
-    private decimal GetColumnTotal(string monthName) { /* ... same as before ... */ if (subAllocations == null) return 0; int monthIndex = Array.IndexOf(months, monthName); if (monthIndex < 0) return 0; return subAllocations.Sum(sub => GetMonthValue(sub, monthIndex) ?? 0); }
-    private decimal GetHistoricValue(string contaGerencial, string monthName) { /* ... same as before ... */ int monthIndex = Array.IndexOf(months, monthName); if (monthIndex < 0 || !historicDataGrouped.TryGetValue(contaGerencial, out var dataList)) return 0; return dataList.Sum(h => GetMonthValue(h, monthIndex) ?? 0); }
-    private decimal GetHistoricRowTotal(string contaGerencial) { /* ... same as before ... */ if (!historicDataGrouped.TryGetValue(contaGerencial, out var dataList)) return 0; decimal total = 0; for (int i = 0; i < 12; i++) { total += dataList.Sum(h => GetMonthValue(h, i) ?? 0); } return total; }
-    private decimal GetHistoricColumnTotal(string monthName) { /* ... same as before ... */ int monthIndex = Array.IndexOf(months, monthName); if (monthIndex < 0 || historicData == null) return 0; return historicData.Sum(h => GetMonthValue(h, monthIndex) ?? 0); }
-    private decimal GetHistoricGrandTotal() { /* ... same as before ... */ if (historicData == null) return 0; decimal total = 0; for (int i = 0; i < 12; i++) { total += historicData.Sum(h => GetMonthValue(h, i) ?? 0); } return total; }
-    private decimal? GetMonthValue(object dataObject, int monthIndex) { /* ... same as before ... */ if (dataObject == null || monthIndex < 0 || monthIndex >= months.Length) return 0; var propertyName = months[monthIndex]; try { var property = dataObject.GetType().GetProperty(propertyName); var value = property?.GetValue(dataObject); if (value is decimal d) return d >= 0 ? d : 0; if (value is double db) return (decimal)db >= 0 ? (decimal)db : 0; if (value is int i) return (decimal)i >= 0 ? (decimal)i : 0; if (value is string s && decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal sd)) return sd >= 0 ? sd : 0; } catch (Exception ex) { Logger.LogError(ex, "Error getting month value for property {PropName} on object type {TypeName}", propertyName, dataObject.GetType().Name); } return 0; }
+    private void RecalculateTotals() { StateHasChanged(); }
 
-    private void RecalculateTotals() { StateHasChanged(); } // Trigger UI update
-
-    // --- Event Handlers ---
-    private async Task OnFinishClicked() // Make async Task
+    private async Task OnFinishClicked()
     {
         errorMessage = null;
         decimal currentUsedTotal = UsedTotal;
@@ -418,16 +412,16 @@ else
         }
         else
         {
-            await HandleSave(); // Use await
+            await HandleSave();
         }
     }
 
     private void CancelWarning() => showWarningPopup = false;
 
-    private async Task ProceedAnyway() // Make async Task
+    private async Task ProceedAnyway()
     {
         showWarningPopup = false;
-        await HandleSave(); // Use await
+        await HandleSave();
     }
 
     private async Task HandleSave()
@@ -452,7 +446,6 @@ else
                 UsedTotal,
                 subAllocations);
 
-            // Check if parent Manager Task might be complete
             if (int.TryParse(costCenterParent.ManagerID, out int managerParentId))
             {
                 Logger.LogInformation("Checking if ManagerParent task {Id} is complete.", managerParentId);
@@ -472,7 +465,7 @@ else
             Logger.LogError(ex, "Error during HandleSave for CC {Id}", CostCenterParentId);
             isLoading = false;
             loadingMessage = "";
-            StateHasChanged(); // Show error message
+            StateHasChanged();
         }
     }
 
@@ -480,9 +473,9 @@ else
 
     private void GoBack()
     {
-        if (costCenterParent != null && costCenterParent.ManagerID != null)
+        if (costCenterParent != null && int.TryParse(costCenterParent.ManagerID, out int managerParentId))
         {
-            NavigationManager.NavigateTo($"/manager/allocate-cost-centers/{costCenterParent.ManagerID}");
+            NavigationManager.NavigateTo($"/manager/allocate-cost-centers/{managerParentId}");
         }
         else
         {
