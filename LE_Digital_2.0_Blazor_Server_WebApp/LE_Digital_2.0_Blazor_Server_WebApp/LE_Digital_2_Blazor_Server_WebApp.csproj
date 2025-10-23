@@ -6,8 +6,10 @@
   </PropertyGroup>
   <ItemGroup>
     <None Remove="Server\Pages\Manager\AllocateCostCenters.razor.css" />
+    <None Remove="Server\Pages\Manager\EditCostCenterDetails.razor.css" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Server\Pages\Manager\EditCostCenterDetails.razor.css" />
     <Content Include="Server\Pages\Manager\AllocateCostCenters.razor.css" />
   </ItemGroup>
   <ItemGroup>

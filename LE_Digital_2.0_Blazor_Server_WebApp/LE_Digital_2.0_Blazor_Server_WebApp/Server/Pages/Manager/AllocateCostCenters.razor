@@ -6,6 +6,7 @@
 @inject IManagerService ManagerService
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthStateProvider
+@inject ILogger<AllocateCostCenters> Logger
 
 @if (managerTask == null || costCenters == null)
 {
@@ -15,18 +16,18 @@ else
 {
     <div class="card mb-3">
         <div class="card-body">
-            <h3 class="card-title">Cost Center Allocation (Version @managerTask.VersionID)</h3>
+            <h3 class="card-title">Cost Center Allocation (Version @managerTask.VersionID) for @managerTask.ManagerName</h3>
             <div class="d-flex justify-content-between">
                 <div>
-                    <strong>Total Allocated Investment:</strong>
+                    <strong>Total Budget Assigned:</strong>
                     <span class="text-primary">@managerTask.AllocatedInvestment?.ToString("C", ptBR)</span>
                 </div>
                 <div>
-                    <strong>Used Investment:</strong>
+                    <strong>Total Allocated to Cost Centers:</strong>
                     <span class="@(UsedTotal > managerTask.AllocatedInvestment ? "text-danger" : "text-success")">@UsedTotal.ToString("C", ptBR)</span>
                 </div>
                 <div>
-                    <strong>Remaining Value:</strong>
+                    <strong>Remaining Budget:</strong>
                     <span class="@(RemainingValue < 0 ? "text-danger" : "")">@RemainingValue.ToString("C", ptBR)</span>
                 </div>
             </div>
@@ -34,8 +35,8 @@ else
     </div>
 
     <div class="mb-3">
-        <button class="btn btn-success" @onclick="OnFinishClicked" disabled="@(UsedTotal > managerTask.AllocatedInvestment)">
-            <span class="oi oi-check" aria-hidden="true"></span> Finish and Submit
+        <button class="btn btn-success" @onclick="OnFinishClicked" disabled="@(IsFinishDisabled())">
+            <span class="oi oi-check" aria-hidden="true"></span> Finish and Submit All Cost Centers
         </button>
     </div>
 
@@ -45,16 +46,16 @@ else
     }
 
     <div class="table-container">
-        @* Wrapping div for scrolling *@
         <table class="table table-bordered table-striped">
             <thead class="table-light">
                 <tr>
                     <th>Status</th>
                     <th>Cost Center</th>
                     <th>Cost Center Name</th>
-                    <th>User</th>
+                    <th>User (Manager)</th>
                     <th>VP</th>
-                    <th style="width: 200px;">Allocated Value</th>
+                    <th style="width: 200px;">Allocated Value (CC Total)</th>
+                    <th style="width: 200px;">Used Value (Monthly Sum)</th>
                     <th style="width: 100px;">Actions</th>
                 </tr>
             </thead>
@@ -62,21 +63,15 @@ else
                 @foreach (var cc in costCenters)
                 {
                     <tr>
-                        <td><span class="badge bg-secondary">@cc.Status</span></td>
+                        <td><span class="badge @GetStatusBadgeClass(cc.Status)">@cc.Status</span></td>
                         <td>@cc.CostCenterCode</td>
                         <td>@cc.CostCenterName</td>
                         <td>@cc.User</td>
                         <td>@cc.Vp</td>
+                        <td class="text-end">@cc.AllocatedValue?.ToString("C", ptBR)</td>
+                        <td class="text-end">@cc.UsedValue?.ToString("C", ptBR)</td>
                         <td>
-                            <div class="input-group">
-                                <span class="input-group-text">R$</span>
-                                @* Input is now readonly *@
-                                <input type="number" step="0.01" class="form-control"
-                                       @bind="cc.AllocatedValue" @bind:event="oninput" readonly />
-                            </div>
-                        </td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowEditPopup(cc.CostCenterID)">
+                            <button class="btn btn-sm btn-outline-primary" @onclick="() => OpenAllocationValuePopup(cc)">
                                 <span class="oi oi-pencil" aria-hidden="true"></span> Edit
                             </button>
                         </td>
@@ -84,7 +79,7 @@ else
                 }
             </tbody>
         </table>
-    </div> @* Closing div for scrolling *@
+    </div>
 }
 
 @if (showWarningPopup)
@@ -94,13 +89,13 @@ else
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Warning: Value Not Fully Allocated</h5>
+                    <h5 class="modal-title">Warning: Budget Not Fully Allocated</h5>
                     <button type="button" class="btn-close" @onclick="CancelWarning"></button>
                 </div>
                 <div class="modal-body">
-                    <p>The total allocated value (@UsedTotal.ToString("C", ptBR)) is less than your assigned budget (@managerTask?.AllocatedInvestment?.ToString("C", ptBR)).</p>
+                    <p>The total allocated value for cost centers (@UsedTotal.ToString("C", ptBR)) is less than your assigned budget (@managerTask?.AllocatedInvestment?.ToString("C", ptBR)).</p>
                     <p>A value of <strong>@RemainingValue.ToString("C", ptBR)</strong> is missing.</p>
-                    <p>Do you want to proceed anyway?</p>
+                    <p>Do you want to proceed and mark this step as complete?</p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" @onclick="CancelWarning">Cancel</button>
@@ -111,22 +106,31 @@ else
     </div>
 }
 
-@if (showEditPopup)
+@if (selectedCostCenterForAllocation != null)
 {
     <div class="modal-backdrop fade show"></div>
     <div class="modal fade show" style="display:block" role="dialog">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Edit Cost Center (Placeholder)</h5>
-                    <button type="button" class="btn-close" @onclick="CloseEditPopup"></button>
+                    <h5 class="modal-title">Set Allocated Value for @selectedCostCenterForAllocation.CostCenterCode</h5>
+                    <button type="button" class="btn-close" @onclick="CloseAllocationValuePopup"></button>
                 </div>
                 <div class="modal-body">
-                    <p>This is where the edit functionality for Cost Center ID @selectedCostCenterId will go.</p>
-                    <p>We will implement this in the next step.</p>
+                    <p>Enter the total budget you want to allocate to this cost center (@selectedCostCenterForAllocation.CostCenterName) for the year.</p>
+                    <div class="input-group mb-3">
+                        <span class="input-group-text">R$</span>
+                        <input type="number" step="0.01" class="form-control" @bind="currentAllocationValueInput" placeholder="0.00" />
+                    </div>
+                    @if (!string.IsNullOrEmpty(popupErrorMessage))
+                    {
+                        <div class="alert alert-danger mt-2">@popupErrorMessage</div>
+                    }
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CloseEditPopup">Close</button>
+                    <button type="button" class="btn btn-secondary" @onclick="CloseAllocationValuePopup">Cancel</button>
+                    @* Make button async *@
+                    <button type="button" class="btn btn-primary" @onclick="async () => await SaveValueAndNavigateToEditDetails()">Confirm and Edit Details</button>
                 </div>
             </div>
         </div>
@@ -141,16 +145,19 @@ else
     private ManagerParent? managerTask;
     private List<CostCenterParent>? costCenters;
     private string? errorMessage;
+    private string? popupErrorMessage;
     private bool showWarningPopup = false;
-    private bool showEditPopup = false;
-    private int selectedCostCenterId;
     private CultureInfo ptBR = new CultureInfo("pt-BR");
+
+    private CostCenterParent? selectedCostCenterForAllocation;
+    private decimal? currentAllocationValueInput;
 
     private decimal UsedTotal => costCenters?.Sum(c => c.AllocatedValue ?? 0) ?? 0;
     private decimal RemainingValue => (managerTask?.AllocatedInvestment ?? 0) - UsedTotal;
 
     protected override async Task OnInitializedAsync()
     {
+        Logger.LogInformation("Initializing AllocateCostCenters for ManagerParentId {Id}", ManagerParentId);
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
         if (user?.Identity?.IsAuthenticated == false)
@@ -162,50 +169,135 @@ else
         managerTask = await ManagerService.GetManagerTaskDetailsAsync(ManagerParentId, user);
         if (managerTask == null)
         {
+            Logger.LogWarning("Manager task {Id} not found or user not authorized.", ManagerParentId);
             NavigationManager.NavigateTo("/manager/dashboard");
             return;
         }
 
         costCenters = await ManagerService.GetCostCentersForManagerAsync(ManagerParentId);
+        Logger.LogInformation("Loaded {Count} cost centers for Manager task {Id}", costCenters.Count, ManagerParentId);
     }
 
-    private void OnFinishClicked()
+    // --- Pop-up Logic ---
+    private void OpenAllocationValuePopup(CostCenterParent costCenter)
     {
-        errorMessage = null;
-        if (UsedTotal < (managerTask?.AllocatedInvestment ?? 0))
+        popupErrorMessage = null;
+        selectedCostCenterForAllocation = costCenter;
+        currentAllocationValueInput = selectedCostCenterForAllocation.AllocatedValue; // Pre-fill
+        Logger.LogInformation("Opening pop-up for CC {Code} (ID: {Id})", costCenter.CostCenterCode, costCenter.CostCenterID);
+    }
+
+    private void CloseAllocationValuePopup()
+    {
+        selectedCostCenterForAllocation = null;
+        currentAllocationValueInput = null;
+        popupErrorMessage = null;
+    }
+
+    private async Task SaveValueAndNavigateToEditDetails()
+    {
+        popupErrorMessage = null;
+        if (selectedCostCenterForAllocation == null || currentAllocationValueInput == null || currentAllocationValueInput < 0)
         {
-            showWarningPopup = true;
+            popupErrorMessage = "Please enter a valid, non-negative allocation value.";
+            return;
         }
-        else if (UsedTotal == (managerTask?.AllocatedInvestment ?? 0))
+
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        Logger.LogInformation("Attempting to save AllocatedValue {Value} for CC ID {Id}", currentAllocationValueInput.Value, selectedCostCenterForAllocation.CostCenterID);
+        bool success = await ManagerService.UpdateCostCenterAllocatedValueAsync(
+            selectedCostCenterForAllocation.CostCenterID,
+            currentAllocationValueInput.Value,
+            user);
+
+        if (success)
         {
-            CompleteStep3();
+            // Update value in the local list for immediate feedback
+            selectedCostCenterForAllocation.AllocatedValue = currentAllocationValueInput.Value;
+            selectedCostCenterForAllocation.Status = "Pendente"; // Reset status
+
+            Logger.LogInformation("Save successful. Navigating to Edit Details for CC ID: {Id}", selectedCostCenterForAllocation.CostCenterID);
+
+            var costCenterIdToNavigate = selectedCostCenterForAllocation.CostCenterID;
+            CloseAllocationValuePopup(); // Close popup first
+
+            NavigationManager.NavigateTo($"/manager/edit-cost-center/{costCenterIdToNavigate}");
         }
         else
         {
-            errorMessage = "Used investment cannot be greater than allocated investment.";
+            popupErrorMessage = "Failed to save allocated value. Please check permissions or try again.";
+            Logger.LogError("Failed to save AllocatedValue for CC ID: {CostCenterID}", selectedCostCenterForAllocation?.CostCenterID);
         }
     }
 
-    private void CompleteStep3()
+
+    // --- Finish Logic (Main Page) ---
+    private bool IsFinishDisabled()
     {
-        Console.WriteLine("Saving allocations...");
-        // TODO: Call service to update costCenterParents & managerParent status
-        NavigationManager.NavigateTo("/manager/dashboard");
+        if (managerTask == null || costCenters == null) return true;
+        // Can only finish if ALL cost centers are 'Realizado' AND total <= budget
+        bool anyPending = costCenters.Any(cc => cc.Status != "Realizado");
+        bool overBudget = UsedTotal > managerTask.AllocatedInvestment;
+        return anyPending || overBudget;
+    }
+
+    private string GetStatusBadgeClass(string? status) => status switch
+    {
+        "Realizado" => "bg-success",
+        "Pendente" => "bg-warning",
+        _ => "bg-secondary" // Default or "Não realizado"
+    };
+
+    private async Task OnFinishClicked()
+    {
+        errorMessage = null;
+        if (IsFinishDisabled())
+        {
+            // Check specific reason
+            if (costCenters != null && costCenters.Any(cc => cc.Status != "Realizado"))
+            {
+                errorMessage = "Cannot finish. Not all cost centers have been marked 'Realizado'. Please complete all allocations first.";
+            }
+            else if (UsedTotal > (managerTask?.AllocatedInvestment ?? 0))
+            {
+                errorMessage = "Cannot finish. The total allocated value to cost centers exceeds your assigned budget.";
+            }
+            return;
+        }
+
+        if (UsedTotal < (managerTask?.AllocatedInvestment ?? 0))
+        {
+            showWarningPopup = true; // Ask confirmation if under budget but all done
+        }
+        else // Exactly equals allocated budget and all done
+        {
+            await CompleteManagerTask();
+        }
+    }
+
+    private async Task CompleteManagerTask()
+    {
+        if (managerTask == null) return;
+        Logger.LogInformation("Attempting to finalize ManagerParent task {Id}", managerTask.ManagerID);
+        try
+        {
+            await ManagerService.FinishManagerTaskAsync(managerTask.ManagerID);
+            NavigationManager.NavigateTo("/manager/dashboard");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error finalizing step: {ex.Message}";
+            Logger.LogError(ex, "Error finalizing manager task {ManagerParentId}", managerTask.ManagerID);
+        }
     }
 
     private void CancelWarning() => showWarningPopup = false;
 
-    private void ProceedAnyway()
+    private async Task ProceedAnyway()
     {
         showWarningPopup = false;
-        CompleteStep3();
+        await CompleteManagerTask();
     }
-
-    private void ShowEditPopup(int costCenterId)
-    {
-        selectedCostCenterId = costCenterId;
-        showEditPopup = true;
-    }
-
-    private void CloseEditPopup() => showEditPopup = false;
 }

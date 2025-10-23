@@ -1,0 +1,493 @@
+﻿@page "/manager/edit-cost-center/{CostCenterParentId:int}"
+@attribute [Authorize(Roles = "Manager, Director, Master")]
+
+@using System.Globalization
+@using LE_Digital_2_Blazor_Server_WebApp.Core.Models
+@inject IManagerService ManagerService
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ILogger<EditCostCenterDetails> Logger
+
+@if (isLoading)
+{
+    <div class="d-flex justify-content-center align-items-center" style="height: 50vh;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <span class="ms-2">@loadingMessage</span>
+    </div>
+}
+else if (costCenterParent == null)
+{
+    <p class="alert alert-danger">Could not load cost center details or you are not authorized for this item.</p>
+    <button class="btn btn-secondary" @onclick="GoBack">Back to Allocations</button>
+}
+else
+{
+    <div class="card mb-3 sticky-top shadow-sm" style="top: 10px; z-index: 100;">
+        <div class="card-body">
+            <h4 class="card-title">@costCenterParent.CostCenterName (@costCenterParent.CostCenterCode) - Version @costCenterParent.VersionID</h4>
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>Total Allocated to CC:</strong>
+                    <span class="text-primary fs-5 fw-bold">@costCenterParent.AllocatedValue?.ToString("C", ptBR)</span>
+                </div>
+                <div>
+                    <strong>Currently Used (Monthly Sum):</strong>
+                    <span class="@(UsedTotal > costCenterParent.AllocatedValue ? "text-danger" : (UsedTotal == costCenterParent.AllocatedValue ? "text-success" : "text-warning")) fs-5 fw-bold">@UsedTotal.ToString("C", ptBR)</span>
+                </div>
+                <div>
+                    <strong>Remaining:</strong>
+                    <span class="@(RemainingValue < 0 ? "text-danger" : "") fs-5 fw-bold">@RemainingValue.ToString("C", ptBR)</span>
+                </div>
+                <div>
+                    <button class="btn btn-secondary me-2" @onclick="Cancel">
+                        <span class="oi oi-action-undo" aria-hidden="true"></span> Cancel
+                    </button>
+                    <button class="btn btn-success" @onclick="OnFinishClicked" disabled="@(UsedTotal > costCenterParent.AllocatedValue)">
+                        <span class="oi oi-check" aria-hidden="true"></span> Finish Cost Center Allocation
+                    </button>
+                </div>
+            </div>
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger mt-2 mb-0">@errorMessage</div>
+            }
+        </div>
+    </div>
+
+
+    <h5 class="mt-4">Budget Allocation (Edit Values Below)</h5>
+    <div class="table-container allocation-table-container mb-4">
+        <table class="table table-bordered table-sm allocation-table">
+            <thead class="table-light">
+                <tr>
+                    <th class="sticky-left">Conta Gerencial</th>
+                    @foreach (var month in months)
+                    {
+                        <th class="text-end">@month</th>
+                    }
+                    <th class="text-end">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var sub in subAllocations)
+                {
+                    <tr>
+                        <td class="sticky-left">@sub.ContaGerencial</td>
+                        @* --- Removed explicit @oninput --- *@
+                        <td class="text-end"><input type="number" step="1" min="0" class="form-control form-control-sm text-end" @bind="sub.January" @bind:event="oninput" /></td>
+                        <td class="text-end"><input type="number" step="1" min="0" class="form-control form-control-sm text-end" @bind="sub.February" @bind:event="oninput" /></td>
+                        <td class="text-end"><input type="number" step="1" min="0" class="form-control form-control-sm text-end" @bind="sub.March" @bind:event="oninput" /></td>
+                        <td class="text-end"><input type="number" step="1" min="0" class="form-control form-control-sm text-end" @bind="sub.April" @bind:event="oninput" /></td>
+                        <td class="text-end"><input type="number" step="1" min="0" class="form-control form-control-sm text-end" @bind="sub.May" @bind:event="oninput" /></td>
+                        <td class="text-end"><input type="number" step="1" min="0" class="form-control form-control-sm text-end" @bind="sub.June" @bind:event="oninput" /></td>
+                        <td class="text-end"><input type="number" step="1" min="0" class="form-control form-control-sm text-end" @bind="sub.July" @bind:event="oninput" /></td>
+                        <td class="text-end"><input type="number" step="1" min="0" class="form-control form-control-sm text-end" @bind="sub.August" @bind:event="oninput" /></td>
+                        <td class="text-end"><input type="number" step="1" min="0" class="form-control form-control-sm text-end" @bind="sub.September" @bind:event="oninput" /></td>
+                        <td class="text-end"><input type="number" step="1" min="0" class="form-control form-control-sm text-end" @bind="sub.October" @bind:event="oninput" /></td>
+                        <td class="text-end"><input type="number" step="1" min="0" class="form-control form-control-sm text-end" @bind="sub.November" @bind:event="oninput" /></td>
+                        <td class="text-end"><input type="number" step="1" min="0" class="form-control form-control-sm text-end" @bind="sub.December" @bind:event="oninput" /></td>
+                        <td class="text-end fw-bold">@GetRowTotal(sub).ToString("N0", ptBR)</td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr class="table-light fw-bold">
+                    <td class="sticky-left">Monthly Total</td>
+                    @foreach (var month in months)
+                    {
+                        <td class="text-end">@GetColumnTotal(month).ToString("N0", ptBR)</td>
+                    }
+                    <td class="text-end">@UsedTotal.ToString("N0", ptBR)</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <h5 class="mt-4">Historic Data (@(historicData.FirstOrDefault()?.Year ?? 0)) (Read Only)</h5>
+    <div class="table-container historic-table">
+        <table class="table table-bordered table-sm">
+            <thead class="table-light">
+                <tr>
+                    <th class="sticky-left">Conta Gerencial</th>
+                    @foreach (var month in months)
+                    {
+                        <th class="text-end">@month</th>
+                    }
+                    <th class="text-end">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!historicDataGrouped.Any())
+                {
+                    <tr><td colspan="14" class="text-center fst-italic">No historic data found for this Cost Center in the reference year.</td></tr>
+                }
+                @foreach (var historyRow in historicDataGrouped.OrderBy(kvp => kvp.Key))
+                {
+                    <tr>
+                        <td class="sticky-left">@historyRow.Key</td>
+                        @foreach (var month in months)
+                        {
+                            <td class="text-end">@GetHistoricValue(historyRow.Key, month).ToString("N2", ptBR)</td>
+                        }
+                        <td class="text-end fw-bold">@GetHistoricRowTotal(historyRow.Key).ToString("N2", ptBR)</td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr class="table-light fw-bold">
+                    <td class="sticky-left">Monthly Total</td>
+                    @foreach (var month in months)
+                    {
+                        <td class="text-end">@GetHistoricColumnTotal(month).ToString("N2", ptBR)</td>
+                    }
+                    <td class="text-end">@GetHistoricGrandTotal().ToString("N2", ptBR)</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+}
+
+@if (showWarningPopup)
+{
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal fade show" style="display:block" role="dialog">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Warning: Value Not Fully Allocated</h5>
+                    <button type="button" class="btn-close" @onclick="CancelWarning"></button>
+                </div>
+                <div class="modal-body">
+                    <p>The total allocated value (@UsedTotal.ToString("C", ptBR)) is less than the assigned budget (@costCenterParent?.AllocatedValue?.ToString("C", ptBR)).</p>
+                    <p>A value of <strong>@RemainingValue.ToString("C", ptBR)</strong> is missing.</p>
+                    <p>Do you want to proceed and save this allocation anyway?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelWarning">Cancel</button>
+                    <button type="button" class="btn btn-primary" @onclick="ProceedAnyway">Yes, Proceed</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+
+@code {
+    [Parameter]
+    public int CostCenterParentId { get; set; }
+
+    // Data Properties
+    private CostCenterParent? costCenterParent;
+    private List<CostCenterSub> subAllocations = new List<CostCenterSub>();
+    private List<CostCenterGridTemplate> templateAccounts = new List<CostCenterGridTemplate>();
+    private List<HistoricData> historicData = new List<HistoricData>();
+    private Dictionary<string, List<HistoricData>> historicDataGrouped = new Dictionary<string, List<HistoricData>>();
+
+    // State & UI Properties
+    private bool isLoading = true;
+    private string loadingMessage = "";
+    private string? errorMessage;
+    private bool showWarningPopup = false;
+    private CultureInfo ptBR = new CultureInfo("pt-BR");
+    private readonly string[] months = { "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December" };
+
+    // Calculated Properties
+    private decimal UsedTotal => subAllocations?.Sum(GetRowTotal) ?? 0;
+    private decimal RemainingValue => (costCenterParent?.AllocatedValue ?? 0) - UsedTotal;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        loadingMessage = "Authenticating...";
+        Logger.LogInformation("Initializing EditCostCenterDetails for CostCenterParentId {Id}", CostCenterParentId);
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user?.Identity?.IsAuthenticated == false)
+        {
+            NavigationManager.NavigateTo("/login");
+            return;
+        }
+        // Add null check before passing user
+        if (user == null)
+        {
+            Logger.LogError("User principal is null in OnInitializedAsync for CC {Id}", CostCenterParentId);
+            errorMessage = "Authentication error occurred.";
+            isLoading = false;
+            return;
+        }
+
+        try
+        {
+            loadingMessage = "Fetching cost center details...";
+            costCenterParent = await ManagerService.GetCostCenterDetailsAsync(CostCenterParentId, user);
+            if (costCenterParent == null || string.IsNullOrEmpty(costCenterParent.CostCenterCode))
+            {
+                Logger.LogWarning("CostCenterParent {Id} not found or user not authorized.", CostCenterParentId);
+                errorMessage = "Cost Center details not found or you are not authorized.";
+                isLoading = false;
+                return;
+            }
+            if (costCenterParent.AllocatedValue == null || costCenterParent.AllocatedValue <= 0)
+            {
+                Logger.LogWarning("CostCenterParent {Id} has zero, null or negative AllocatedValue ({Value}). Redirecting back.", CostCenterParentId, costCenterParent.AllocatedValue);
+                GoBack();
+                return;
+            }
+
+
+            loadingMessage = "Fetching template and history...";
+            Logger.LogInformation("Fetching template accounts.");
+            templateAccounts = await ManagerService.GetContaGerencialTemplateAsync();
+
+            Logger.LogInformation("Fetching historic data for CC {Code}.", costCenterParent.CostCenterCode);
+            historicData = await ManagerService.GetHistoricDataForCostCenterAsync(costCenterParent.CostCenterCode, 2024);
+
+            historicDataGrouped = historicData
+                .GroupBy(h => h.ManagingAccount ?? "Unknown")
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            loadingMessage = "Initializing allocations...";
+            InitializeSubAllocations();
+
+            loadingMessage = "Calculating auto-fill...";
+            CalculateAutoFill();
+
+            loadingMessage = "";
+            Logger.LogInformation("Finished loading data for CostCenterParentId {Id}", CostCenterParentId);
+
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error initializing EditCostCenterDetails page for CC {Id}", CostCenterParentId);
+            errorMessage = $"Error loading data: {ex.Message}. See console log for details.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void InitializeSubAllocations()
+    {
+        Logger.LogInformation("Initializing {Count} sub-allocation rows from template.", templateAccounts.Count);
+        subAllocations = templateAccounts.Select(t => new CostCenterSub
+            {
+                ContaGerencial = t.ContaGerencial,
+                January = 0,
+                February = 0,
+                March = 0,
+                April = 0,
+                May = 0,
+                June = 0,
+                July = 0,
+                August = 0,
+                September = 0,
+                October = 0,
+                November = 0,
+                December = 0
+            }).ToList();
+    }
+
+    private void CalculateAutoFill()
+    {
+        if (historicData == null || !historicData.Any() || costCenterParent?.AllocatedValue == null || costCenterParent.AllocatedValue <= 0)
+        {
+            Logger.LogInformation("Skipping auto-fill: No valid historic data or zero/negative allocated value ({Value}).", costCenterParent?.AllocatedValue);
+            return;
+        }
+
+        Logger.LogInformation("Starting auto-fill calculation.");
+        var totalAllocated = costCenterParent.AllocatedValue.Value;
+        decimal grandHistoricTotal = historicData.Sum(h => (GetMonthValue(h, 0) ?? 0) + (GetMonthValue(h, 1) ?? 0) + (GetMonthValue(h, 2) ?? 0) + (GetMonthValue(h, 3) ?? 0) + (GetMonthValue(h, 4) ?? 0) + (GetMonthValue(h, 5) ?? 0) + (GetMonthValue(h, 6) ?? 0) + (GetMonthValue(h, 7) ?? 0) + (GetMonthValue(h, 8) ?? 0) + (GetMonthValue(h, 9) ?? 0) + (GetMonthValue(h, 10) ?? 0) + (GetMonthValue(h, 11) ?? 0));
+
+
+        if (grandHistoricTotal <= 0)
+        {
+            Logger.LogInformation("Skipping auto-fill: Grand historic total is zero or negative.");
+            return;
+        }
+
+
+        decimal[] monthlyHistoricTotals = new decimal[12];
+        for (int i = 0; i < 12; i++) { monthlyHistoricTotals[i] = historicData.Sum(h => GetMonthValue(h, i) ?? 0); }
+
+        decimal[] monthlyBudgetTargets = new decimal[12];
+        for (int i = 0; i < 12; i++) { monthlyBudgetTargets[i] = totalAllocated * (monthlyHistoricTotals[i] / grandHistoricTotal); }
+        Logger.LogInformation("Monthly Budget Targets: {Targets}", string.Join(", ", monthlyBudgetTargets.Select(d => d.ToString("N2"))));
+
+        var accountMonthlyPercentages = new Dictionary<string, decimal[]>();
+        foreach (var accountGroup in historicDataGrouped)
+        {
+            string accountName = accountGroup.Key;
+            accountMonthlyPercentages[accountName] = new decimal[12];
+            var accountDataList = accountGroup.Value;
+            for (int i = 0; i < 12; i++)
+            {
+                decimal accountMonthlySum = accountDataList.Sum(h => GetMonthValue(h, i) ?? 0);
+                accountMonthlyPercentages[accountName][i] = (monthlyHistoricTotals[i] > 0) ? (accountMonthlySum / monthlyHistoricTotals[i]) : 0;
+            }
+        }
+
+        decimal runningTotalCheck = 0;
+        foreach (var sub in subAllocations)
+        {
+            if (sub.ContaGerencial != null && accountMonthlyPercentages.TryGetValue(sub.ContaGerencial, out var percentages))
+            {
+                sub.January = Math.Round(monthlyBudgetTargets[0] * percentages[0]);
+                sub.February = Math.Round(monthlyBudgetTargets[1] * percentages[1]);
+                sub.March = Math.Round(monthlyBudgetTargets[2] * percentages[2]);
+                sub.April = Math.Round(monthlyBudgetTargets[3] * percentages[3]);
+                sub.May = Math.Round(monthlyBudgetTargets[4] * percentages[4]);
+                sub.June = Math.Round(monthlyBudgetTargets[5] * percentages[5]);
+                sub.July = Math.Round(monthlyBudgetTargets[6] * percentages[6]);
+                sub.August = Math.Round(monthlyBudgetTargets[7] * percentages[7]);
+                sub.September = Math.Round(monthlyBudgetTargets[8] * percentages[8]);
+                sub.October = Math.Round(monthlyBudgetTargets[9] * percentages[9]);
+                sub.November = Math.Round(monthlyBudgetTargets[10] * percentages[10]);
+                sub.December = Math.Round(monthlyBudgetTargets[11] * percentages[11]);
+                runningTotalCheck += GetRowTotal(sub);
+            }
+            else { Logger.LogDebug("Account {AccountName} in template but not found in history for CC {Code}", sub.ContaGerencial, costCenterParent.CostCenterCode); }
+        }
+        Logger.LogInformation("Auto-fill complete. Calculated initial UsedTotal: {Total}", UsedTotal);
+        Logger.LogInformation("Running Total Check after rounding: {Total}", runningTotalCheck);
+
+        // Optional: Distribute rounding difference here if needed
+        AdjustRoundingDifference(totalAllocated, runningTotalCheck);
+
+        RecalculateTotals();
+    }
+
+    // --- Helper methods ---
+    private void AdjustRoundingDifference(decimal targetTotal, decimal currentTotal)
+    {
+        decimal difference = targetTotal - currentTotal;
+        Logger.LogInformation("Rounding difference: {Difference}", difference);
+
+        if (Math.Abs(difference) < 1.0m || !subAllocations.Any()) return; // Ignore small differences or empty list
+
+        // Simple strategy: Add/subtract difference to the January value of the first account that has a non-zero total
+        var firstSubWithAllocation = subAllocations.FirstOrDefault(s => GetRowTotal(s) != 0);
+        if (firstSubWithAllocation != null)
+        {
+            firstSubWithAllocation.January = (firstSubWithAllocation.January ?? 0) + difference;
+            Logger.LogInformation("Adjusted difference on {Account} in January.", firstSubWithAllocation.ContaGerencial);
+        }
+        else
+        {
+            // If all rows are zero, add to the first row's January
+            if (subAllocations.Any())
+            {
+                subAllocations[0].January = (subAllocations[0].January ?? 0) + difference;
+                Logger.LogInformation("Adjusted difference on first account {Account} in January.", subAllocations[0].ContaGerencial);
+            }
+        }
+        RecalculateTotals();
+    }
+
+
+    private decimal GetRowTotal(CostCenterSub sub) { /* ... same as before ... */ return (sub.January ?? 0) + (sub.February ?? 0) + (sub.March ?? 0) + (sub.April ?? 0) + (sub.May ?? 0) + (sub.June ?? 0) + (sub.July ?? 0) + (sub.August ?? 0) + (sub.September ?? 0) + (sub.October ?? 0) + (sub.November ?? 0) + (sub.December ?? 0); }
+    private decimal GetColumnTotal(string monthName) { /* ... same as before ... */ if (subAllocations == null) return 0; int monthIndex = Array.IndexOf(months, monthName); if (monthIndex < 0) return 0; return subAllocations.Sum(sub => GetMonthValue(sub, monthIndex) ?? 0); }
+    private decimal GetHistoricValue(string contaGerencial, string monthName) { /* ... same as before ... */ int monthIndex = Array.IndexOf(months, monthName); if (monthIndex < 0 || !historicDataGrouped.TryGetValue(contaGerencial, out var dataList)) return 0; return dataList.Sum(h => GetMonthValue(h, monthIndex) ?? 0); }
+    private decimal GetHistoricRowTotal(string contaGerencial) { /* ... same as before ... */ if (!historicDataGrouped.TryGetValue(contaGerencial, out var dataList)) return 0; decimal total = 0; for (int i = 0; i < 12; i++) { total += dataList.Sum(h => GetMonthValue(h, i) ?? 0); } return total; }
+    private decimal GetHistoricColumnTotal(string monthName) { /* ... same as before ... */ int monthIndex = Array.IndexOf(months, monthName); if (monthIndex < 0 || historicData == null) return 0; return historicData.Sum(h => GetMonthValue(h, monthIndex) ?? 0); }
+    private decimal GetHistoricGrandTotal() { /* ... same as before ... */ if (historicData == null) return 0; decimal total = 0; for (int i = 0; i < 12; i++) { total += historicData.Sum(h => GetMonthValue(h, i) ?? 0); } return total; }
+    private decimal? GetMonthValue(object dataObject, int monthIndex) { /* ... same as before ... */ if (dataObject == null || monthIndex < 0 || monthIndex >= months.Length) return 0; var propertyName = months[monthIndex]; try { var property = dataObject.GetType().GetProperty(propertyName); var value = property?.GetValue(dataObject); if (value is decimal d) return d >= 0 ? d : 0; if (value is double db) return (decimal)db >= 0 ? (decimal)db : 0; if (value is int i) return (decimal)i >= 0 ? (decimal)i : 0; if (value is string s && decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal sd)) return sd >= 0 ? sd : 0; } catch (Exception ex) { Logger.LogError(ex, "Error getting month value for property {PropName} on object type {TypeName}", propertyName, dataObject.GetType().Name); } return 0; }
+
+    private void RecalculateTotals() { StateHasChanged(); } // Trigger UI update
+
+    // --- Event Handlers ---
+    private async Task OnFinishClicked() // Make async Task
+    {
+        errorMessage = null;
+        decimal currentUsedTotal = UsedTotal;
+        decimal currentAllocated = costCenterParent?.AllocatedValue ?? 0;
+
+        if (currentUsedTotal > currentAllocated)
+        {
+            errorMessage = "Used investment cannot be greater than the allocated investment for this cost center.";
+            Logger.LogWarning("Save attempt failed: UsedTotal {Used} exceeds AllocatedValue {Allocated} for CC {Id}", currentUsedTotal, currentAllocated, CostCenterParentId);
+            return;
+        }
+
+        if (currentUsedTotal < currentAllocated)
+        {
+            showWarningPopup = true;
+        }
+        else
+        {
+            await HandleSave(); // Use await
+        }
+    }
+
+    private void CancelWarning() => showWarningPopup = false;
+
+    private async Task ProceedAnyway() // Make async Task
+    {
+        showWarningPopup = false;
+        await HandleSave(); // Use await
+    }
+
+    private async Task HandleSave()
+    {
+        if (costCenterParent == null || subAllocations == null || costCenterParent.AllocatedValue == null)
+        {
+            errorMessage = "Data not loaded correctly. Cannot save.";
+            Logger.LogError("Save failed: costCenterParent or subAllocations or AllocatedValue is null for CC {Id}", CostCenterParentId);
+            return;
+        }
+
+        isLoading = true;
+        loadingMessage = "Saving allocations...";
+        StateHasChanged();
+
+        try
+        {
+            Logger.LogInformation("Saving allocations for CC {Id}. Allocated: {Allocated}, Used: {Used}", CostCenterParentId, costCenterParent.AllocatedValue.Value, UsedTotal);
+            await ManagerService.SaveCostCenterAllocationsAsync(
+                CostCenterParentId,
+                costCenterParent.AllocatedValue.Value,
+                UsedTotal,
+                subAllocations);
+
+            // Check if parent Manager Task might be complete
+            if (int.TryParse(costCenterParent.ManagerID, out int managerParentId))
+            {
+                Logger.LogInformation("Checking if ManagerParent task {Id} is complete.", managerParentId);
+                await ManagerService.FinishManagerTaskAsync(managerParentId);
+            }
+            else
+            {
+                Logger.LogWarning("Could not parse ManagerID '{MgrId}' to check parent task status.", costCenterParent.ManagerID);
+            }
+
+            Logger.LogInformation("Save successful. Navigating back for CC {Id}", CostCenterParentId);
+            GoBack();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error saving data: {ex.Message}";
+            Logger.LogError(ex, "Error during HandleSave for CC {Id}", CostCenterParentId);
+            isLoading = false;
+            loadingMessage = "";
+            StateHasChanged(); // Show error message
+        }
+    }
+
+    private void Cancel() { GoBack(); }
+
+    private void GoBack()
+    {
+        if (costCenterParent != null && costCenterParent.ManagerID != null)
+        {
+            NavigationManager.NavigateTo($"/manager/allocate-cost-centers/{costCenterParent.ManagerID}");
+        }
+        else
+        {
+            Logger.LogWarning("Cannot determine parent ManagerID for CC {Id}. Navigating to manager dashboard.", CostCenterParentId);
+            NavigationManager.NavigateTo("/manager/dashboard");
+        }
+    }
+}

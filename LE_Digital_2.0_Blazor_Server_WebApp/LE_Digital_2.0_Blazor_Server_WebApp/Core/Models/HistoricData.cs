@@ -1,19 +1,24 @@
-﻿using Microsoft.EntityFrameworkCore;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore; // Needed for Keyless attribute if not using DataAnnotations Schema
 
 namespace LE_Digital_2_Blazor_Server_WebApp.Core.Models
 {
-    // This class represents the le_historic view in the database.
-    // Use Keyless attribute as views typically don't have a single primary key.
-    [Keyless] // Important for views!
+    // Maps to the le_historic view
+    [Keyless] // Views don't have a primary key defined for EF Core
     public class HistoricData
     {
-        // Property names should match view column names for simplicity
-        public string? centroCusto { get; set; }
+        // Corrected property name to match view column 'centroCusto'
+        // Using [Column] attribute to ensure correct mapping
+        [Column("centroCusto")]
+        public string? CentroCusto { get; set; }
+
         public string? ManagingAccount { get; set; }
+
+        // Changed 'Year' to match casing, although EF Core is often case-insensitive for properties vs columns
+        [Column("year")]
         public int? Year { get; set; }
 
+        // Month properties (ensure type matches DB, decimal is usually safe)
         [Column(TypeName = "decimal(18, 2)")]
         public decimal? January { get; set; }
         [Column(TypeName = "decimal(18, 2)")]
@@ -39,7 +44,8 @@ namespace LE_Digital_2_Blazor_Server_WebApp.Core.Models
         [Column(TypeName = "decimal(18, 2)")]
         public decimal? December { get; set; }
 
-        public string? CostCenter { get; set; }
+        // The view also selects costCenter and responsible, let's include them
+        public string? CostCenter { get; set; } // This seems redundant with centroCusto? Check view logic if needed.
         public string? Responsible { get; set; }
     }
 }

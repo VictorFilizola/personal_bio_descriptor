@@ -1,0 +1,87 @@
+﻿@using LE_Digital_2_Blazor_Server_WebApp.Core.Models
+@using System.Security.Claims
+@inject IManagerService ManagerService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
+
+<div class="modal-backdrop fade show"></div>
+<div class="modal fade show" style="display:block" role="dialog">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Set Allocated Value for @CostCenter?.CostCenterCode</h5>
+                <button type="button" class="btn-close" @onclick="ClosePopup"></button>
+            </div>
+            <div class="modal-body">
+                <p>Enter the total value you plan to allocate for this Cost Center:</p>
+                <div class="input-group mb-3">
+                    <span class="input-group-text">R$</span>
+                    <input type="number" step="0.01" class="form-control" @bind="allocatedValueInput" />
+                </div>
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger">@errorMessage</div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="ClosePopup">Cancel</button>
+                <button type="button" class="btn btn-primary" @onclick="SaveAndNavigate" disabled="isSaving">
+                    @(isSaving ? "Saving..." : "Save and Edit Details")
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int CostCenterParentId { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; } // To notify the parent to close
+
+    private CostCenterParent? CostCenter;
+    private decimal? allocatedValueInput;
+    private string? errorMessage;
+    private bool isSaving = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        CostCenter = await ManagerService.GetCostCenterDetailsAsync(CostCenterParentId, user);
+        allocatedValueInput = CostCenter?.AllocatedValue ?? 0; // Pre-fill if already set
+    }
+
+    private async Task SaveAndNavigate()
+    {
+        errorMessage = null;
+        isSaving = true;
+        if (allocatedValueInput == null || allocatedValueInput < 0)
+        {
+            errorMessage = "Please enter a valid, non-negative allocated value.";
+            isSaving = false;
+            return;
+        }
+
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var success = await ManagerService.SetCostCenterAllocatedValueAsync(CostCenterParentId, allocatedValueInput.Value, user);
+
+        if (success)
+        {
+            NavigationManager.NavigateTo($"/manager/edit-cost-center/{CostCenterParentId}");
+            await OnClose.InvokeAsync(); // Close the popup on success
+        }
+        else
+        {
+            errorMessage = "Failed to save allocated value. Cost Center not found or not authorized.";
+        }
+        isSaving = false;
+    }
+
+    private async Task ClosePopup()
+    {
+        await OnClose.InvokeAsync();
+    }
+}

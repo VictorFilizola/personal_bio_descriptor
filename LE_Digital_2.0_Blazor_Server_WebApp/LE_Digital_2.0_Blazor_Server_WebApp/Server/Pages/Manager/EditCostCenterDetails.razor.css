@@ -1,0 +1,74 @@
+﻿.table-container {
+    max-height: 38vh;
+    overflow-y: auto;
+    overflow-x: auto;
+    border: 1px solid #dee2e6;
+    position: relative;
+}
+
+.historic-table {
+    max-height: 30vh;
+}
+
+/* Sticky Header */
+.table-container thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background-color: #f8f9fa; /* Light grey background */
+    box-shadow: inset 0 -2px 0 #dee2e6; /* Bottom border */
+}
+
+/* Sticky First Column (Account Name) */
+.table-container th:first-child,
+.table-container td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background-color: #f8f9fa; /* Match header or use #ffffff for white */
+    min-width: 200px; /* Ensure account name has enough space */
+    max-width: 300px; /* Prevent it from getting too wide */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* Add ... if name is too long */
+}
+
+/* Ensure header corner (Top-Left cell) is styled correctly and above others */
+.table-container thead th:first-child {
+    z-index: 3;
+    background-color: #f0f2f5; /* Slightly different background for corner */
+    box-shadow: inset -1px -2px 0 #dee2e6; /* Add right border shadow */
+}
+
+
+/* Style inputs in the allocation table */
+.allocation-table input[type=number] {
+    width: 90px;
+    padding: 0.2rem 0.4rem;
+    font-size: 0.8rem;
+    border: 1px solid #ced4da;
+    border-radius: 0.2rem;
+    box-sizing: border-box;
+    text-align: right; /* Align numbers right */
+}
+
+    /* Remove spinners from number inputs */
+    .allocation-table input[type=number]::-webkit-outer-spin-button,
+    .allocation-table input[type=number]::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+.allocation-table input[type=number] {
+    -moz-appearance: textfield; /* Firefox */
+}
+
+/* Footer alignment */
+.table-container tfoot td {
+    text-align: right; /* Align footer numbers right */
+}
+
+    .table-container tfoot td:first-child {
+        text-align: left; /* Align first footer cell left */
+        background-color: #f0f2f5; /* Match sticky corner */
+    }

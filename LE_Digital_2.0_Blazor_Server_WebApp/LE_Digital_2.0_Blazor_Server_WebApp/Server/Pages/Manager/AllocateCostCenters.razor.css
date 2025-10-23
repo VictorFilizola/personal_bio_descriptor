@@ -5,7 +5,7 @@
     overflow-y: auto; /* Adds vertical scrollbar if content overflows */
     border: 1px solid #dee2e6; /* Optional border */
 }
-
+th
     /* Sticky header rules remain the same */
     .table-container thead th {
         position: sticky;
