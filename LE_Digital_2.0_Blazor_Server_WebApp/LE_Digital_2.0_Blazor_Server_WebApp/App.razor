@@ -5,6 +5,7 @@
         <Found Context="routeData">
             <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
                 <NotAuthorized>
+                    @* This should redirect if user lacks required roles for the page *@
                     <RedirectToLogin />
                 </NotAuthorized>
             </AuthorizeRouteView>
