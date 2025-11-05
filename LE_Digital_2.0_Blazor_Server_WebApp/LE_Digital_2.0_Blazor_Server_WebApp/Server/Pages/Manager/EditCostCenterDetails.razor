@@ -246,7 +246,7 @@ else
                 isLoading = false;
                 return;
             }
-            if (costCenterParent.AllocatedValue == null || costCenterParent.AllocatedValue <= 0)
+            if (costCenterParent.AllocatedValue == null)
             {
                 Logger.LogWarning("CostCenterParent {Id} has zero, null or negative AllocatedValue ({Value}). Redirecting back.", CostCenterParentId, costCenterParent.AllocatedValue);
                 GoBack();

@@ -27,6 +27,10 @@ else
                     <span class="@(UsedTotal > managerTask.AllocatedInvestment ? "text-danger" : "text-success")">@UsedTotal.ToString("C", ptBR)</span>
                 </div>
                 <div>
+                    <strong>Total Used (Monthly Sum):</strong>
+                    <span class="text-info fw-bold">@UsedMonthlyTotal.ToString("C", ptBR)</span>
+                </div>
+                <div>
                     <strong>Remaining Budget:</strong>
                     <span class="@(RemainingValue < 0 ? "text-danger" : "")">@RemainingValue.ToString("C", ptBR)</span>
                 </div>
@@ -155,36 +159,39 @@ else
     private decimal UsedTotal => costCenters?.Sum(c => c.AllocatedValue ?? 0) ?? 0;
     private decimal RemainingValue => (managerTask?.AllocatedInvestment ?? 0) - UsedTotal;
 
-    protected override async Task OnInitializedAsync()
+    private decimal UsedMonthlyTotal => costCenters?.Sum(c => c.UsedValue ?? 0) ?? 0;
+
+    private async Task RefreshData()
     {
-        Logger.LogInformation("Initializing AllocateCostCenters for ManagerParentId {Id}", ManagerParentId);
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
-        if (user?.Identity?.IsAuthenticated == false)
+        if (user == null)
         {
             NavigationManager.NavigateTo("/login");
             return;
         }
 
-        // *** FIX: Add null check for user ***
-        if (user == null)
-        {
-            Logger.LogError("User principal is null in OnInitializedAsync.");
-            errorMessage = "Authentication error occurred.";
-            return;
-        }
         managerTask = await ManagerService.GetManagerTaskDetailsAsync(ManagerParentId, user);
+        costCenters = await ManagerService.GetCostCentersForManagerAsync(ManagerParentId);
+        StateHasChanged();
+    }
 
-        managerTask = await ManagerService.GetManagerTaskDetailsAsync(ManagerParentId, user);
-        if (managerTask == null)
+    protected override async Task OnInitializedAsync()
+    {
+        Logger.LogInformation("Initializing AllocateCostCenters for ManagerParentId {Id}", ManagerParentId);
+        await RefreshData(); // Use the new refresh method
+
+        if (managerTask == null) // RefreshData will set this
         {
             Logger.LogWarning("Manager task {Id} not found or user not authorized.", ManagerParentId);
             NavigationManager.NavigateTo("/manager/dashboard");
             return;
         }
 
-        costCenters = await ManagerService.GetCostCentersForManagerAsync(ManagerParentId);
-        Logger.LogInformation("Loaded {Count} cost centers for Manager task {Id}", costCenters.Count, ManagerParentId);
+        if (costCenters != null)
+        {
+            Logger.LogInformation("Loaded {Count} cost centers for Manager task {Id}", costCenters.Count, ManagerParentId);
+        }
     }
 
     // --- Pop-up Logic ---
@@ -214,25 +221,55 @@ else
 
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
+        if (user == null)
+        {
+            popupErrorMessage = "Authentication error.";
+            return;
+        }
 
-        Logger.LogInformation("Attempting to save AllocatedValue {Value} for CC ID {Id}", currentAllocationValueInput.Value, selectedCostCenterForAllocation.CostCenterID);
-        bool success = await ManagerService.UpdateCostCenterAllocatedValueAsync(
-            selectedCostCenterForAllocation.CostCenterID,
-            currentAllocationValueInput.Value,
-            user);
+        bool success = false;
+
+        if (currentAllocationValueInput.Value == 0)
+        {
+            // *** FIX: Call the new SaveZeroAllocationAsync method ***
+            Logger.LogInformation("Attempting to save ZERO allocation for CC ID {Id}", selectedCostCenterForAllocation.CostCenterID);
+            success = await ManagerService.SaveZeroAllocationAsync(selectedCostCenterForAllocation.CostCenterID, user);
+        }
+        else
+        {
+            // This is for values > 0
+            Logger.LogInformation("Attempting to save AllocatedValue {Value} for CC ID {Id}", currentAllocationValueInput.Value, selectedCostCenterForAllocation.CostCenterID);
+            success = await ManagerService.UpdateCostCenterAllocatedValueAsync(
+                selectedCostCenterForAllocation.CostCenterID,
+                currentAllocationValueInput.Value,
+                user);
+        }
 
         if (success)
         {
-            // Update value in the local list for immediate feedback
-            selectedCostCenterForAllocation.AllocatedValue = currentAllocationValueInput.Value;
-            selectedCostCenterForAllocation.Status = "Pendente"; // Reset status
+            // Refresh all data from the database to get new totals and statuses
+            await RefreshData();
 
-            Logger.LogInformation("Save successful. Navigating to Edit Details for CC ID: {Id}", selectedCostCenterForAllocation.CostCenterID);
+            if (currentAllocationValueInput.Value == 0)
+            {
+                Logger.LogInformation("Save successful for 0 value. Status set to Realizado for CC ID: {Id}", selectedCostCenterForAllocation.CostCenterID);
 
-            var costCenterIdToNavigate = selectedCostCenterForAllocation.CostCenterID;
-            CloseAllocationValuePopup(); // Close popup first
-
-            NavigationManager.NavigateTo($"/manager/edit-cost-center/{costCenterIdToNavigate}");
+                // Check if this action completes the *entire* manager task
+                if (int.TryParse(selectedCostCenterForAllocation.ManagerID, out int managerParentId))
+                {
+                    await ManagerService.FinishManagerTaskAsync(managerParentId);
+                    await RefreshData(); // Refresh again to show parent task update
+                }
+                CloseAllocationValuePopup();
+            }
+            else
+            {
+                // Value is > 0. Navigate to the details page.
+                Logger.LogInformation("Save successful. Navigating to Edit Details for CC ID: {Id}", selectedCostCenterForAllocation.CostCenterID);
+                var costCenterIdToNavigate = selectedCostCenterForAllocation.CostCenterID;
+                CloseAllocationValuePopup(); // Close popup first
+                NavigationManager.NavigateTo($"/manager/edit-cost-center/{costCenterIdToNavigate}");
+            }
         }
         else
         {

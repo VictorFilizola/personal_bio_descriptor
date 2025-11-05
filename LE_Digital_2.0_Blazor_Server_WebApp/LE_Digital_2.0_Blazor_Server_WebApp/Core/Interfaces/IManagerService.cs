@@ -25,5 +25,6 @@ namespace LE_Digital_2_Blazor_Server_WebApp.Core.Interfaces
 
         // Updates the ManagerParent status if all associated CostCenterParents are done
         Task FinishManagerTaskAsync(int managerParentId);
+        Task<bool> SaveZeroAllocationAsync(int costCenterParentId, ClaimsPrincipal user);
     }
 }
