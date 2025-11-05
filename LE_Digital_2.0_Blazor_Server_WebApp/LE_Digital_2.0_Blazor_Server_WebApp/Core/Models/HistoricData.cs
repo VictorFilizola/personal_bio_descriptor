@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LE_Digital_2_Blazor_Server_WebApp.Core.Models
 {
+    // Maps to the le_historic view
     [Keyless]
     public class HistoricData
     {
@@ -16,7 +17,7 @@ namespace LE_Digital_2_Blazor_Server_WebApp.Core.Models
         public int? Year { get; set; }
 
         // *** FIX: Changed all month types from decimal? to double? ***
-        // This must match the data type in your SQL View (float/real)
+        // This must match the data type in your SQL View (which is float/real)
         public double? January { get; set; }
         public double? February { get; set; }
         public double? March { get; set; }

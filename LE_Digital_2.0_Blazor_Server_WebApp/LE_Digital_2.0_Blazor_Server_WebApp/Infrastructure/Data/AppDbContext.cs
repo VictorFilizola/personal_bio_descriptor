@@ -66,21 +66,6 @@ namespace LE_Digital_2_Blazor_Server_WebApp.Infrastructure.Data
                 entity.Property(e => e.November).HasColumnType("decimal(18, 2)");
                 entity.Property(e => e.December).HasColumnType("decimal(18, 2)");
             });
-            modelBuilder.Entity<HistoricData>(entity =>
-            {
-                entity.Property(e => e.January).HasColumnType("decimal(18, 2)");
-                entity.Property(e => e.February).HasColumnType("decimal(18, 2)");
-                entity.Property(e => e.March).HasColumnType("decimal(18, 2)");
-                entity.Property(e => e.April).HasColumnType("decimal(18, 2)");
-                entity.Property(e => e.May).HasColumnType("decimal(18, 2)");
-                entity.Property(e => e.June).HasColumnType("decimal(18, 2)");
-                entity.Property(e => e.July).HasColumnType("decimal(18, 2)");
-                entity.Property(e => e.August).HasColumnType("decimal(18, 2)");
-                entity.Property(e => e.September).HasColumnType("decimal(18, 2)");
-                entity.Property(e => e.October).HasColumnType("decimal(18, 2)");
-                entity.Property(e => e.November).HasColumnType("decimal(18, 2)");
-                entity.Property(e => e.December).HasColumnType("decimal(18, 2)");
-            });
         }
     }
 }

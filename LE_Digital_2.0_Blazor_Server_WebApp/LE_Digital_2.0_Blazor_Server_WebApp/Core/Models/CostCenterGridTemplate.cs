@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace LE_Digital_2_Blazor_Server_WebApp.Core.Models
 {
-    [Table("costCenterGridTemplate")]
+    [Table("costCenterGridTem   plate")]
     public class CostCenterGridTemplate
     {
         [Key]
