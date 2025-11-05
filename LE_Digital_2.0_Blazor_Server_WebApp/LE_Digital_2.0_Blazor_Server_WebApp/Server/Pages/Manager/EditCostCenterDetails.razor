@@ -192,7 +192,11 @@ else
 @code {
     [Parameter]
     public int CostCenterParentId { get; set; }
-    public decimal AllocatedValue { get; set; }
+
+    // --- ADD THIS LINE ---
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public decimal? allocatedValue { get; set; }
 
     private CostCenterParent? costCenterParent;
     private List<CostCenterSub> subAllocations = new List<CostCenterSub>();
@@ -236,6 +240,7 @@ else
             return;
         }
 
+
         try
         {
             loadingMessage = "Fetching cost center details...";
@@ -248,10 +253,15 @@ else
                 return;
             }
 
-            // *** FIX: Set the AllocatedValue from the route parameter ***
-            // This is the new value from the popup, NOT what's in the DB.
-            costCenterParent.AllocatedValue = this.AllocatedValue;
-            // *** END FIX ***
+            // --- ADD THIS LOGIC ---
+            // Check if a new value was passed from the popup's query string
+            if (allocatedValue.HasValue)
+            {
+                // Overwrite the loaded value with the new one from the popup
+                costCenterParent.AllocatedValue = allocatedValue.Value;
+                Logger.LogInformation("Received new AllocatedValue {Value} from query string for CC {Id}", allocatedValue.Value, CostCenterParentId);
+            }
+            // --- END OF ADDED LOGIC ---
 
             loadingMessage = "Fetching template and history...";
             templateAccounts = await ManagerService.GetContaGerencialTemplateAsync();

@@ -72,36 +72,18 @@
             return;
         }
 
-        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
+        // --- THIS IS THE MODIFIED LOGIC ---
 
-        if (user == null)
-        {
-            popupErrorMessage = "Authentication error occurred.";
-            Logger.LogError("User principal is null in SaveValueAndNavigate.");
-            return;
-        }
+        // 1. Get the values to pass (no service call)
+        var costCenterIdToNavigate = TargetCostCenter.CostCenterID;
+        var valueToPass = allocationValueInput.Value;
 
-        Logger.LogInformation("Attempting to save AllocatedValue {Value} for CC ID {Id}", allocationValueInput.Value, TargetCostCenter.CostCenterID);
+        // 2. Close the popup
+        await ClosePopup();
 
-        // *** FIX: Changed method name to match the interface ***
-        bool success = await ManagerService.UpdateCostCenterAllocatedValueAsync(
-            TargetCostCenter.CostCenterID,
-            allocationValueInput.Value,
-            user);
-
-        if (success)
-        {
-            Logger.LogInformation("Save successful. Navigating to Edit Details for CC ID: {Id}", TargetCostCenter.CostCenterID);
-            var costCenterIdToNavigate = TargetCostCenter.CostCenterID;
-            await ClosePopup(); // Close the popup
-            NavigationManager.NavigateTo($"/manager/edit-cost-center/{costCenterIdToNavigate}");
-        }
-        else
-        {
-            popupErrorMessage = "Failed to save allocated value. Please check permissions or try again.";
-            Logger.LogError("Failed to save AllocatedValue for CC ID: {CostCenterID}", TargetCostCenter?.CostCenterID);
-        }
+        // 3. Navigate to the details page, passing the new value as a query parameter.
+        //    This does NOT save to the database.
+        NavigationManager.NavigateTo($"/manager/edit-cost-center/{costCenterIdToNavigate}?allocatedValue={valueToPass}");
     }
 
     private async Task ClosePopup()

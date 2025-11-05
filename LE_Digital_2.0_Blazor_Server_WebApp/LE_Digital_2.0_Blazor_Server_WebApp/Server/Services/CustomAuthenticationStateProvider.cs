@@ -26,7 +26,7 @@ namespace LE_Digital_2_Blazor_Server_WebApp.Server.Services
             // *** FOR DEVELOPER TESTING ONLY ***
             // Set this to a valid DB login (e.g., "TEIXVIBR") to force login as that user.
             // Set to null to use normal Windows Authentication.
-            string forceLoginUser = null; // "TEIXVIBR"; 
+            string forceLoginUser = "ALEXMABR"; // "TEIXVIBR"; 
             // **********************************
 
             if (!string.IsNullOrEmpty(forceLoginUser))
