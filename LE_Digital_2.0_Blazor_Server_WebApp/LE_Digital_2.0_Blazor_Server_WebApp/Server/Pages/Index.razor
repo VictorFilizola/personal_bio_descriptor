@@ -1,0 +1,49 @@
+﻿@page "/"
+@attribute [Authorize]
+
+@using LE_Digital_2_Blazor_Server_WebApp.Core.Interfaces
+@using Microsoft.Extensions.Logging
+
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
+@inject IManagerService ManagerService
+@inject ILogger<Index> Logger
+
+<p>Loading... redirecting to your dashboard.</p>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user?.Identity?.IsAuthenticated == true)
+        {
+            Logger.LogInformation("Redirecting user {User} based on role.", user.Identity.Name);
+
+            // Priority 1: Controller / Master
+            if (user.IsInRole("Controller") || user.IsInRole("Master"))
+            {
+                NavigationManager.NavigateTo("/controller/manage-versions");
+            }
+            // Priority 2: Director
+            else if (user.IsInRole("Director"))
+            {
+                NavigationManager.NavigateTo("/director/dashboard");
+            }
+            // Priority 3: Manager
+            else if (user.IsInRole("Manager"))
+            {
+                // Navigate to their dashboard regardless of tasks
+                NavigationManager.NavigateTo("/manager/dashboard");
+            }
+            else
+            {
+                // User is authenticated but has no valid roles.
+                Logger.LogWarning("User {User} is authenticated but has no valid roles.", user.Identity.Name);
+                // Send them to the Access Denied page
+                NavigationManager.NavigateTo("/access-denied");
+            }
+        }
+    }
+}

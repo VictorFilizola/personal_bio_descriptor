@@ -5,8 +5,13 @@
         <Found Context="routeData">
             <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
                 <NotAuthorized>
-                    @* This should redirect if user lacks required roles for the page *@
-                    <RedirectToLogin />
+                    <PageTitle>Not Authorized</PageTitle>
+                    <LayoutView Layout="@typeof(MainLayout)">
+                        <div class="alert alert-danger" role="alert">
+                            <h3>Access Denied</h3>
+                            <p>You are not authorized to access this application. Please contact IT for assistance.</p>
+                        </div>
+                    </LayoutView>
                 </NotAuthorized>
             </AuthorizeRouteView>
             <FocusOnNavigate RouteData="@routeData" Selector="h1" />

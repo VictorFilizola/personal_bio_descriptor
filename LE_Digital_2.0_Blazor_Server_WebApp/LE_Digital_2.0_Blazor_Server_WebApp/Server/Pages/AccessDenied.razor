@@ -1,0 +1,10 @@
+﻿@page "/access-denied"
+@attribute [Authorize]
+
+<PageTitle>Access Denied</PageTitle>
+
+<div class="alert alert-danger" role="alert">
+    <h3>Access Denied</h3>
+    <p>You are authorized to log in, but you do not have a valid role (Controller, Director, Manager) assigned to your account.</p>
+    <p>Please contact your IT administrator for assistance.</p>
+</div>

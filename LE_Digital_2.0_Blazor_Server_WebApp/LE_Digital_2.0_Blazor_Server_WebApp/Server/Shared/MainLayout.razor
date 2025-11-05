@@ -1,9 +1,11 @@
 ﻿@inherits LayoutComponentBase
 @using LE_Digital_2_Blazor_Server_WebApp.Server.Services
 @using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
 
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager NavManager
+@inject AppState AppState
 
 <div class="page">
     <div class="sidebar">
@@ -11,13 +13,37 @@
     </div>
 
     <main>
+        @if (AppState.IsImpersonating)
+        {
+            <div class="alert alert-warning mb-0 p-2 d-flex justify-content-between align-items-center" role="alert" style="z-index: 2000; position: sticky; top: 0;">
+                <span class="fw-bold">
+                    <span class="oi oi-person" aria-hidden="true"></span>
+                    Simulating as: @(AppState.ImpersonatedUser?.FindFirstValue("DisplayName") ?? AppState.ImpersonatedUser?.Identity?.Name)
+                </span>
+                <button class="btn btn-sm btn-dark" @onclick="StopImpersonation">
+                    <span class="oi oi-x" aria-hidden="true"></span> Stop Simulating
+                </button>
+            </div>
+        }
+
         <div class="top-row px-4">
             <AuthorizeView>
                 <Authorized>
                     <span class="text-white">
-                        Welcome, <strong>@context.User.Identity?.Name</strong>
+                        @if (AppState.IsImpersonating)
+                        {
+                            <span>
+                                Welcome, <strong>@(AppState.CurrentUser?.FindFirstValue("DisplayName"))</strong>
+                                (Simulating <strong>@(AppState.ImpersonatedUser?.FindFirstValue("DisplayName"))</strong>)
+                            </span>
+                        }
+                        else
+                        {
+                            <span>
+                                Welcome, <strong>@context.User.FindFirstValue("DisplayName")</strong>
+                            </span>
+                        }
                     </span>
-                    <button class="btn btn-link text-white" @onclick="HandleLogout">Logout</button>
                 </Authorized>
             </AuthorizeView>
         </div>
@@ -29,10 +55,13 @@
 </div>
 
 @code {
-    private void HandleLogout()
+    private void StopImpersonation()
     {
+        // Call the new method on the provider
         var customAuthProvider = (CustomAuthenticationStateProvider)AuthStateProvider;
-        customAuthProvider.Logout();
-        NavManager.NavigateTo("/login", forceLoad: true);
+        customAuthProvider.StopImpersonation();
+
+        // Navigate back to the main (Controller) dashboard
+        NavManager.NavigateTo("/");
     }
 }

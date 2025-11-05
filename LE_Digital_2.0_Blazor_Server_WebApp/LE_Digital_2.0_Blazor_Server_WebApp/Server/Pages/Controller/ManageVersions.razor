@@ -1,5 +1,4 @@
 ﻿@page "/controller/manage-versions"
-@page "/"
 @attribute [Authorize(Roles = "Controller, Master")]
 
 @using System.Security.Claims
@@ -11,7 +10,7 @@
 @inject NavigationManager NavigationManager
 @inject AppState AppState
 @inject AuthenticationStateProvider AuthStateProvider
-
+@inject IManagerService ManagerService
 
 <h3>Manage Budget Versions</h3>
 
@@ -104,12 +103,15 @@ else
         }
     }
 
-    private void HandleUserImpersonation(User selectedUser)
+    private async Task HandleUserImpersonation(User selectedUser)
     {
         showSimulateUserDialog = false;
 
+        // 1. Build the ClaimsPrincipal for the selected user
         var identity = new ClaimsIdentity("Impersonation");
-        identity.AddClaim(new Claim(ClaimTypes.Name, selectedUser.Name ?? ""));
+        identity.AddClaim(new Claim(ClaimTypes.Name, selectedUser.Login ?? "")); // Use Login
+        identity.AddClaim(new Claim("DisplayName", selectedUser.Name ?? "")); // Keep DisplayName
+
         if (selectedUser.Permission != null)
         {
             var permissions = selectedUser.Permission.Split(',').Select(p => p.Trim());
@@ -120,9 +122,40 @@ else
         }
         var impersonatedPrincipal = new ClaimsPrincipal(identity);
 
-        AppState.StartImpersonation(impersonatedPrincipal);
+        // 2. Get the auth provider and call the new StartImpersonation method
+        // This will update the auth state WITHOUT a page reload.
+        var customAuthProvider = (CustomAuthenticationStateProvider)AuthStateProvider;
+        customAuthProvider.StartImpersonation(impersonatedPrincipal);
 
-        // The old, incorrect line is removed. We navigate instead.
-        NavigationManager.NavigateTo("/", forceLoad: true);
+        // 3. Now, navigate to the correct dashboard based on the NEW user's roles
+        var user = impersonatedPrincipal; // The new simulated user
+
+        if (user.IsInRole("Controller") || user.IsInRole("Master"))
+        {
+            NavigationManager.NavigateTo("/");
+        }
+        else if (user.IsInRole("Director"))
+        {
+            NavigationManager.NavigateTo("/director/dashboard");
+        }
+        else if (user.IsInRole("Manager"))
+        {
+            // Check if they have tasks to decide where to go
+            var tasks = await ManagerService.GetPendingManagerTasksAsync(user);
+            if (tasks.Any())
+            {
+                NavigationManager.NavigateTo("/manager/dashboard");
+            }
+            else
+            {
+                // If no tasks, just go to their (empty) dashboard
+                NavigationManager.NavigateTo("/manager/dashboard");
+            }
+        }
+        else
+        {
+            // No valid role, just go to the root
+            NavigationManager.NavigateTo("/");
+        }
     }
 }

@@ -6,10 +6,24 @@ using LE_Digital_2_Blazor_Server_WebApp.Infrastructure.Services;
 using LE_Digital_2_Blazor_Server_WebApp.Server.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.Negotiate;
 
 var builder = WebApplication.CreateBuilder(args);
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+// ADD THIS: Register IHttpContextAccessor
+builder.Services.AddHttpContextAccessor();
+
+// ADD THIS: Setup Windows Authentication
+builder.Services.AddAuthentication(NegotiateDefaults.AuthenticationScheme)
+    .AddNegotiate();
+
+// ADD THIS: Make authorization required by default
+builder.Services.AddAuthorization(options =>
+{
+    options.FallbackPolicy = options.DefaultPolicy;
+});
 
 // *** CHANGE THIS: Use AddDbContextFactory ***
 // This registers the factory as Singleton and manages DbContext instances properly
@@ -44,6 +58,10 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
+
+// ADD THESE TWO LINES
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
