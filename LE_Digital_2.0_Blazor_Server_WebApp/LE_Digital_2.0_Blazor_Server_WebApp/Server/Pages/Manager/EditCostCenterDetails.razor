@@ -1,4 +1,4 @@
-﻿@page "/manager/edit-cost-center/{CostCenterParentId:int}/{AllocatedValue:decimal}"
+﻿@page "/manager/edit-cost-center/{CostCenterParentId:int}"
 @attribute [Authorize(Roles = "Manager, Director, Master")]
 
 @using System.Globalization
@@ -219,6 +219,7 @@ else
 
     private decimal UsedTotal => allocationGrandTotal;
     private decimal RemainingValue => (costCenterParent?.AllocatedValue ?? 0) - UsedTotal;
+
 
     protected override async Task OnInitializedAsync()
     {

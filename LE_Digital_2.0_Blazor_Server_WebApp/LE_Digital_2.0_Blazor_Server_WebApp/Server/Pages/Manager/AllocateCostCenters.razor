@@ -229,8 +229,7 @@ else
         CloseAllocationValuePopup(); // Close popup first
 
         // Navigate with the new value in the route
-        NavigationManager.NavigateTo($"/manager/edit-cost-center/{costCenterIdToNavigate}/{valueToPass}");
-
+        NavigationManager.NavigateTo($"/manager/edit-cost-center/{costCenterIdToNavigate}?allocatedValue={valueToPass}");
         // We are no longer calling any service methods here.
     }
 
