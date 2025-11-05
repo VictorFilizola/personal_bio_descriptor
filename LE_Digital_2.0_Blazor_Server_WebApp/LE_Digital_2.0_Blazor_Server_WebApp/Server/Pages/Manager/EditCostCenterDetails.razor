@@ -1,4 +1,4 @@
-﻿@page "/manager/edit-cost-center/{CostCenterParentId:int}"
+﻿@page "/manager/edit-cost-center/{CostCenterParentId:int}/{AllocatedValue:decimal}"
 @attribute [Authorize(Roles = "Manager, Director, Master")]
 
 @using System.Globalization
@@ -192,6 +192,7 @@ else
 @code {
     [Parameter]
     public int CostCenterParentId { get; set; }
+    public decimal AllocatedValue { get; set; }
 
     private CostCenterParent? costCenterParent;
     private List<CostCenterSub> subAllocations = new List<CostCenterSub>();
@@ -246,17 +247,15 @@ else
                 isLoading = false;
                 return;
             }
-            if (costCenterParent.AllocatedValue == null)
-            {
-                Logger.LogWarning("CostCenterParent {Id} has zero, null or negative AllocatedValue ({Value}). Redirecting back.", CostCenterParentId, costCenterParent.AllocatedValue);
-                GoBack();
-                return;
-            }
 
+            // *** FIX: Set the AllocatedValue from the route parameter ***
+            // This is the new value from the popup, NOT what's in the DB.
+            costCenterParent.AllocatedValue = this.AllocatedValue;
+            // *** END FIX ***
 
             loadingMessage = "Fetching template and history...";
             templateAccounts = await ManagerService.GetContaGerencialTemplateAsync();
-            historicData = await ManagerService.GetHistoricDataForCostCenterAsync(costCenterParent.CostCenterCode, 2025); // Using 2025
+            historicData = await ManagerService.GetHistoricDataForCostCenterAsync(costCenterParent.CostCenterCode, 2025);
 
             historicDataGrouped = historicData
                 .GroupBy(h => h.ManagingAccount ?? "Unknown")
@@ -265,11 +264,15 @@ else
             loadingMessage = "Initializing allocations...";
             InitializeSubAllocations();
 
-            loadingMessage = "Calculating auto-fill...";
-            CalculateAutoFill(); // This now also calculates historic totals
+            // *** FIX: Only auto-fill if the new value is > 0 ***
+            if (costCenterParent.AllocatedValue > 0)
+            {
+                loadingMessage = "Calculating auto-fill...";
+                CalculateAutoFill();
+            }
 
             loadingMessage = "Calculating current totals...";
-            RecalculateTotals(); // Calculate totals for the (auto-filled) allocation grid
+            RecalculateTotals();
 
             loadingMessage = "";
             Logger.LogInformation("Finished loading data for CostCenterParentId {Id}", CostCenterParentId);

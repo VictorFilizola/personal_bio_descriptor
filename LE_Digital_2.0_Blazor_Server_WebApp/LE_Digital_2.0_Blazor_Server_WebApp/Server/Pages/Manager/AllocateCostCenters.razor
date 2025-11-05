@@ -219,63 +219,19 @@ else
             return;
         }
 
-        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
-        if (user == null)
-        {
-            popupErrorMessage = "Authentication error.";
-            return;
-        }
+        // *** FIX: We no longer save here. We just navigate. ***
+        decimal valueToPass = currentAllocationValueInput.Value;
 
-        bool success = false;
+        Logger.LogInformation("Navigating to Edit Details for CC ID: {Id} with new value {Value}",
+            selectedCostCenterForAllocation.CostCenterID, valueToPass);
 
-        if (currentAllocationValueInput.Value == 0)
-        {
-            // *** FIX: Call the new SaveZeroAllocationAsync method ***
-            Logger.LogInformation("Attempting to save ZERO allocation for CC ID {Id}", selectedCostCenterForAllocation.CostCenterID);
-            success = await ManagerService.SaveZeroAllocationAsync(selectedCostCenterForAllocation.CostCenterID, user);
-        }
-        else
-        {
-            // This is for values > 0
-            Logger.LogInformation("Attempting to save AllocatedValue {Value} for CC ID {Id}", currentAllocationValueInput.Value, selectedCostCenterForAllocation.CostCenterID);
-            success = await ManagerService.UpdateCostCenterAllocatedValueAsync(
-                selectedCostCenterForAllocation.CostCenterID,
-                currentAllocationValueInput.Value,
-                user);
-        }
+        var costCenterIdToNavigate = selectedCostCenterForAllocation.CostCenterID;
+        CloseAllocationValuePopup(); // Close popup first
 
-        if (success)
-        {
-            // Refresh all data from the database to get new totals and statuses
-            await RefreshData();
+        // Navigate with the new value in the route
+        NavigationManager.NavigateTo($"/manager/edit-cost-center/{costCenterIdToNavigate}/{valueToPass}");
 
-            if (currentAllocationValueInput.Value == 0)
-            {
-                Logger.LogInformation("Save successful for 0 value. Status set to Realizado for CC ID: {Id}", selectedCostCenterForAllocation.CostCenterID);
-
-                // Check if this action completes the *entire* manager task
-                if (int.TryParse(selectedCostCenterForAllocation.ManagerID, out int managerParentId))
-                {
-                    await ManagerService.FinishManagerTaskAsync(managerParentId);
-                    await RefreshData(); // Refresh again to show parent task update
-                }
-                CloseAllocationValuePopup();
-            }
-            else
-            {
-                // Value is > 0. Navigate to the details page.
-                Logger.LogInformation("Save successful. Navigating to Edit Details for CC ID: {Id}", selectedCostCenterForAllocation.CostCenterID);
-                var costCenterIdToNavigate = selectedCostCenterForAllocation.CostCenterID;
-                CloseAllocationValuePopup(); // Close popup first
-                NavigationManager.NavigateTo($"/manager/edit-cost-center/{costCenterIdToNavigate}");
-            }
-        }
-        else
-        {
-            popupErrorMessage = "Failed to save allocated value. Please check permissions or try again.";
-            Logger.LogError("Failed to save AllocatedValue for CC ID: {CostCenterID}", selectedCostCenterForAllocation?.CostCenterID);
-        }
+        // We are no longer calling any service methods here.
     }
 
 

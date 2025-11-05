@@ -20,11 +20,7 @@ namespace LE_Digital_2_Blazor_Server_WebApp.Core.Interfaces
         // Saves the detailed monthly allocations from the EditCostCenterDetails page
         Task SaveCostCenterAllocationsAsync(int costCenterParentId, decimal allocatedValue, decimal newUsedValue, List<CostCenterSub> updatedSubAllocations);
 
-        // Updates only the AllocatedValue (called from the pop-up before navigating to detail page)
-        Task<bool> UpdateCostCenterAllocatedValueAsync(int costCenterParentId, decimal allocatedValue, ClaimsPrincipal user);
-
         // Updates the ManagerParent status if all associated CostCenterParents are done
         Task FinishManagerTaskAsync(int managerParentId);
-        Task<bool> SaveZeroAllocationAsync(int costCenterParentId, ClaimsPrincipal user);
     }
 }
