@@ -5,6 +5,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
+    <Content Remove="wwwroot\favicon.ico" />
+  </ItemGroup>
+  <ItemGroup>
     <None Remove="Server\Pages\Manager\AllocateCostCenters.razor.css" />
     <None Remove="Server\Pages\Manager\EditCostCenterDetails.razor.css" />
   </ItemGroup>
@@ -19,5 +22,8 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="wwwroot\images\" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="wwwroot\favicon.ico" />
   </ItemGroup>
 </Project>
