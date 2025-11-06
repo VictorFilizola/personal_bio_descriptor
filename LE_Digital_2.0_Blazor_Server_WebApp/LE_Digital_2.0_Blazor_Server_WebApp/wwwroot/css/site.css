@@ -38,3 +38,81 @@ html, body {
     right: 0.75rem;
     top: 0.5rem;
 }
+
+/* --- CUSTOM THEME OVERRIDES --- */
+
+/* 1. Define your new colors */
+:root {
+    --custom-green: #00A97A;
+    --custom-purple: #9F2CB6;
+    --custom-purple-light: #f2e4f7; /* A very light purple for accents */
+}
+
+/* 2. Override all "Green/Success" elements */
+.bg-success {
+    background-color: var(--custom-green) !important; /* For badges like 'Realizado' */
+}
+
+.btn-success {
+    background-color: var(--custom-green);
+    border-color: var(--custom-green);
+}
+
+    .btn-success:hover {
+        background-color: #008761; /* A slightly darker green for hover */
+        border-color: #008761;
+    }
+
+.text-success {
+    color: var(--custom-green) !important; /* For text like totals */
+}
+
+
+/* 3. Override all "Purple/Primary" elements */
+.btn-primary {
+    background-color: var(--custom-purple);
+    border-color: var(--custom-purple);
+}
+
+    .btn-primary:hover {
+        background-color: #812395; /* A slightly darker purple for hover */
+        border-color: #812395;
+    }
+
+.btn-outline-primary {
+    color: var(--custom-purple);
+    border-color: var(--custom-purple);
+}
+
+    .btn-outline-primary:hover {
+        background-color: var(--custom-purple);
+        border-color: var(--custom-purple);
+        color: #fff;
+    }
+
+.text-primary {
+    color: var(--custom-purple) !important; /* For text like 'Total Allocated' */
+}
+
+/* This fixes the active link color in your new top-nav */
+.header-nav-menu .nav-link.active {
+    color: var(--custom-purple) !important;
+}
+
+
+/* 4. Add Accents to make it less bland */
+.table > thead.table-light > tr > th,
+.table > thead.table-light th {
+    background-color: var(--custom-purple-light); /* Light purple for all table headers */
+    color: #333;
+}
+
+/* This makes sure sticky headers also get the new color */
+.table-container thead th {
+    background-color: var(--custom-purple-light) !important;
+}
+
+    .table-container thead th:first-child,
+    .table-container tfoot td:first-child {
+        background-color: var(--custom-purple-light) !important;
+    }
