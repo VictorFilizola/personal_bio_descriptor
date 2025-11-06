@@ -403,7 +403,11 @@ else
         var firstSubWithAllocation = subAllocations.FirstOrDefault(s => GetRowTotal(s) != 0);
         if (firstSubWithAllocation != null)
         {
-            firstSubWithAllocation.January = (firstSubWithAllocation.January ?? 0) + difference;
+            decimal newValue = (firstSubWithAllocation.January ?? 0) + difference;
+
+            // Your fix applied here:
+            firstSubWithAllocation.January = newValue < 0 ? 0 : newValue;
+
             Logger.LogInformation("Adjusted difference on {Account} in January.", firstSubWithAllocation.ContaGerencial);
         }
         else
@@ -518,16 +522,6 @@ else
                 costCenterParent.AllocatedValue.Value,
                 UsedTotal,
                 subAllocations);
-
-            if (int.TryParse(costCenterParent.ManagerID, out int managerParentId))
-            {
-                Logger.LogInformation("Checking if ManagerParent task {Id} is complete.", managerParentId);
-                await ManagerService.FinishManagerTaskAsync(managerParentId);
-            }
-            else
-            {
-                Logger.LogWarning("Could not parse ManagerID '{MgrId}' to check parent task status.", costCenterParent.ManagerID);
-            }
 
             Logger.LogInformation("Save successful. Navigating back for CC {Id}", CostCenterParentId);
             GoBack();
