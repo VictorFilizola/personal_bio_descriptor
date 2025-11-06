@@ -1,5 +1,193 @@
-﻿<h3>ControlVersion</h3>
+﻿@page "/controller/control-data/{VersionId:int}"
+@attribute [Authorize(Roles = "Controller, Master")]
+
+@using LE_Digital_2_Blazor_Server_WebApp.Core.Models
+@using System.Globalization
+@using ClosedXML.Excel @* <-- Add this for Excel *@
+@using System.IO @* <-- Add this for MemoryStream *@
+
+@inject IVersionService VersionService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+
+<h3>Check Data for Version @VersionId</h3>
+
+@if (isLoading)
+{
+    <p><em>Loading data...</em></p>
+}
+else
+{
+    <div class="mb-3">
+        <button class="btn btn-success" @onclick="ExportToExcel">
+            <span class="oi oi-spreadsheet" aria-hidden="true"></span> Export to Excel
+        </button>
+        <button class="btn btn-secondary" @onclick="GoBack">
+            <span class="oi oi-arrow-left" aria-hidden="true"></span> Back to Versions
+        </button>
+    </div>
+
+    <h4>Manager Allocations</h4>
+    <div class="table-responsive mb-4" style="max-height: 400px;">
+        <table class="table table-sm table-bordered">
+            <thead class="table-light sticky-top">
+                <tr>
+                    <th>Manager ID</th>
+                    <th>Manager Name</th>
+                    <th>Status</th>
+                    <th>Allocated</th>
+                    <th>Used</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in managerParents)
+                {
+                    <tr>
+                        <td>@item.ManagerID</td>
+                        <td>@item.ManagerName</td>
+                        <td>@item.Status</td>
+                        <td>@item.AllocatedInvestment?.ToString("C", ptBR)</td>
+                        <td>@item.UsedInvestment?.ToString("C", ptBR)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <h4>Cost Center Allocations</h4>
+    <div class="table-responsive mb-4" style="max-height: 400px;">
+        <table class="table table-sm table-bordered">
+            <thead class="table-light sticky-top">
+                <tr>
+                    <th>CC ID</th>
+                    <th>CC Code</th>
+                    <th>CC Name</th>
+                    <th>Manager</th>
+                    <th>Status</th>
+                    <th>Allocated</th>
+                    <th>Used</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in costCenterParents)
+                {
+                    <tr>
+                        <td>@item.CostCenterID</td>
+                        <td>@item.CostCenterCode</td>
+                        <td>@item.CostCenterName</td>
+                        <td>@item.User</td>
+                        <td>@item.Status</td>
+                        <td>@item.AllocatedValue?.ToString("C", ptBR)</td>
+                        <td>@item.UsedValue?.ToString("C", ptBR)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <h4>Monthly Details</h4>
+    <div class="table-responsive mb-4" style="max-height: 600px;">
+        <table class="table table-sm table-bordered">
+            <thead class="table-light sticky-top">
+                <tr>
+                    <th>CC Code</th>
+                    <th>CC Name</th>
+                    <th>Conta Gerencial</th>
+                    @foreach (var month in months)
+                    {
+                        <th>@month</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in subDetails)
+                {
+                    <tr>
+                        <td>@item.CostCenterCode</td>
+                        <td>@item.CostCenterName</td>
+                        <td>@item.ContaGerencial</td>
+                        <td>@item.January?.ToString("N2", ptBR)</td>
+                        <td>@item.February?.ToString("N2", ptBR)</td>
+                        <td>@item.March?.ToString("N2", ptBR)</td>
+                        <td>@item.April?.ToString("N2", ptBR)</td>
+                        <td>@item.May?.ToString("N2", ptBR)</td>
+                        <td>@item.June?.ToString("N2", ptBR)</td>
+                        <td>@item.July?.ToString("N2", ptBR)</td>
+                        <td>@item.August?.ToString("N2", ptBR)</td>
+                        <td>@item.September?.ToString("N2", ptBR)</td>
+                        <td>@item.October?.ToString("N2", ptBR)</td>
+                        <td>@item.November?.ToString("N2", ptBR)</td>
+                        <td>@item.December?.ToString("N2", ptBR)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
 
 @code {
+    [Parameter]
+    public int VersionId { get; set; }
 
+    private bool isLoading = true;
+    private List<ManagerParent> managerParents = new();
+    private List<CostCenterParent> costCenterParents = new();
+    private List<CostCenterSubDetail> subDetails = new();
+    private CultureInfo ptBR = new CultureInfo("pt-BR");
+    private readonly string[] months = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        // Fetch all three data sets in parallel
+        var managerTask = VersionService.GetManagerParentsAsync(VersionId);
+        var ccParentTask = VersionService.GetCostCenterParentsAsync(VersionId);
+        var subDetailTask = VersionService.GetCostCenterSubDetailsAsync(VersionId);
+
+        await Task.WhenAll(managerTask, ccParentTask, subDetailTask);
+
+        managerParents = await managerTask;
+        costCenterParents = await ccParentTask;
+        subDetails = await subDetailTask;
+        isLoading = false;
+    }
+
+    private async Task ExportToExcel()
+    {
+        // Use ClosedXML to create an Excel file in memory
+        using (var workbook = new XLWorkbook())
+        {
+            // Sheet 1
+            var ws1 = workbook.Worksheets.Add("ManagerParent");
+            ws1.Cell(1, 1).InsertTable(managerParents);
+            ws1.Columns().AdjustToContents();
+
+            // Sheet 2
+            var ws2 = workbook.Worksheets.Add("CostCenterParent");
+            ws2.Cell(1, 1).InsertTable(costCenterParents);
+            ws2.Columns().AdjustToContents();
+
+            // Sheet 3
+            var ws3 = workbook.Worksheets.Add("CostCenterSubDetail");
+            ws3.Cell(1, 1).InsertTable(subDetails);
+            ws3.Columns().AdjustToContents();
+
+            // Save the workbook to a memory stream
+            using (var stream = new MemoryStream())
+            {
+                workbook.SaveAs(stream);
+                var bytes = stream.ToArray();
+                // Convert to Base64
+                var base64 = Convert.ToBase64String(bytes);
+
+                // Trigger the file download using JavaScript
+                await JS.InvokeVoidAsync("saveAsFile", $"LEDigital_Version_{VersionId}.xlsx", base64);
+            }
+        }
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/controller/manage-versions");
+    }
 }

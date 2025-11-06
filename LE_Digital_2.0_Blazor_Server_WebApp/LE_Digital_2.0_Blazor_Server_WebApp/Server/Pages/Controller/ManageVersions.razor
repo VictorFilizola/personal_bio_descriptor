@@ -60,11 +60,26 @@ else
                     <td>@version.Step</td>
                     <td>@version.PlannedInvestment?.ToString("C")</td>
                     <td>@version.CreationDate?.ToShortDateString()</td>
+
                     <td>
-                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => NavigateToEdit(version)"
-                                disabled="@(version.Step != "Step1 - Director Cost Allocation")">
-                            Allocate VPs
-                        </button>
+                        @if (version.Step == "Step1 - Director Cost Allocation")
+                        {
+                            <button class="btn btn-sm btn-outline-secondary" @onclick="() => NavigateToEdit(version)">
+                                Allocate VPs
+                            </button>
+                        }
+                        else if (version.Step == "Step3 - Cost Center Allocation")
+                        {
+                            <button class="btn btn-sm btn-info" @onclick="() => NavigateToControl(version)">
+                                Check Data
+                            </button>
+                        }
+                        else
+                        {
+                            <button class="btn btn-sm btn-outline-secondary" disabled>
+                                Allocate VPs
+                            </button>
+                        }
                     </td>
                 </tr>
             }
@@ -158,4 +173,10 @@ else
             NavigationManager.NavigateTo("/");
         }
     }
+
+    void NavigateToControl(VersionParent version)
+    {
+        NavigationManager.NavigateTo($"/controller/control-data/{version.VersionID}");
+    }
+
 }

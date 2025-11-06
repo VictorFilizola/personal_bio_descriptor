@@ -117,5 +117,60 @@ namespace LE_Digital_2_Blazor_Server_WebApp.Infrastructure.Services
                 await context.SaveChangesAsync();
             }
         }
+
+        public async Task<List<ManagerParent>> GetManagerParentsAsync(int versionId)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            string versionIdString = versionId.ToString();
+            return await context.ManagerParents
+                .Where(m => m.VersionID == versionIdString)
+                .ToListAsync();
+        }
+
+        public async Task<List<CostCenterParent>> GetCostCenterParentsAsync(int versionId)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            string versionIdString = versionId.ToString();
+            return await context.CostCenterParents
+                .Where(c => c.VersionID == versionIdString)
+                .ToListAsync();
+        }
+
+        public async Task<List<CostCenterSubDetail>> GetCostCenterSubDetailsAsync(int versionId)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            // This LINQ query replicates your SQL INNER JOIN
+            return await context.CostCenterSubs
+                .Where(ccs => ccs.VersionID == versionId)
+                .Join(context.CostCenterParents,
+                    ccs => ccs.CostCenterParentID,
+                    ccp => ccp.CostCenterID,
+                    (ccs, ccp) => new CostCenterSubDetail
+                    {
+                        CostCenterSubID = ccs.CostCenterSubID,
+                        CostCenterParentID = ccs.CostCenterParentID,
+                        ManagerID = ccs.ManagerID,
+                        VersionID = ccs.VersionID,
+                        ContaGerencial = ccs.ContaGerencial,
+                        January = ccs.January,
+                        February = ccs.February,
+                        March = ccs.March,
+                        April = ccs.April,
+                        May = ccs.May,
+                        June = ccs.June,
+                        July = ccs.July,
+                        August = ccs.August,
+                        September = ccs.September,
+                        October = ccs.October,
+                        November = ccs.November,
+                        December = ccs.December,
+                        CostCenterCode = ccp.CostCenterCode,
+                        CostCenterName = ccp.CostCenterName
+                    })
+                .OrderBy(c => c.CostCenterCode)
+                .ThenBy(c => c.ContaGerencial)
+                .ToListAsync();
+        }
     }
 }

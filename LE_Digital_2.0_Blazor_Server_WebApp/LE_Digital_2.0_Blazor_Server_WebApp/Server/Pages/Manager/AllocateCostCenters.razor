@@ -19,15 +19,15 @@ else
             <h3 class="card-title">Cost Center Allocation (Version @managerTask.VersionID) for @managerTask.ManagerName</h3>
             <div class="d-flex justify-content-between">
                 <div>
-                    <strong>Total Budget Assigned:</strong>
+                    <strong>Total Budget Assigned by VP:</strong>
                     <span class="text-primary">@managerTask.AllocatedInvestment?.ToString("C", ptBR)</span>
                 </div>
                 <div>
-                    <strong>Total Allocated to Cost Centers:</strong>
+                    <strong>Total Allocated Value to Cost Centers:</strong>
                     <span class="@(UsedTotal > managerTask.AllocatedInvestment ? "text-danger" : "text-success")">@UsedTotal.ToString("C", ptBR)</span>
                 </div>
                 <div>
-                    <strong>Total Used (Monthly Sum):</strong>
+                    <strong>Total Used Value:</strong>
                     <span class="text-info fw-bold">@UsedMonthlyTotal.ToString("C", ptBR)</span>
                 </div>
                 <div>
@@ -39,7 +39,7 @@ else
     </div>
 
     <div class="mb-3">
-        <button class="btn btn-success" @onclick="OnFinishClicked" disabled="@(IsFinishDisabled())">
+        <button type="button" class="btn btn-success" @onclick="OnFinishClicked" disabled="@(IsFinishDisabled())">
             <span class="oi oi-check" aria-hidden="true"></span> Finish and Submit All Cost Centers
         </button>
     </div>

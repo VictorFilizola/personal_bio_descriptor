@@ -13,6 +13,9 @@ namespace LE_Digital_2_Blazor_Server_WebApp.Core.Interfaces
         Task DeleteVersionAsync(int versionId);
         Task<List<VpList>> GetVpListAsync();
         Task CompleteStep1Async(int versionId, List<VpParent> allocations, IEmailService emailService, IUserService userService);
-        Task TrySetVersionStepAsync(int versionId, string newStep); 
+        Task TrySetVersionStepAsync(int versionId, string newStep);
+        Task<List<ManagerParent>> GetManagerParentsAsync(int versionId);
+        Task<List<CostCenterParent>> GetCostCenterParentsAsync(int versionId);
+        Task<List<CostCenterSubDetail>> GetCostCenterSubDetailsAsync(int versionId);
     }
 }
