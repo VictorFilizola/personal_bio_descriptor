@@ -1,7 +1,13 @@
 ﻿.page {
-    height: 100%;
-    overflow: hidden;
-    background-color: inherit;
+    display: flex;
+    flex-direction: row;
+    height: 100vh; /* Set height to 100% of the viewport height */
+}
+main {
+    display: flex;
+    flex-direction: column; /* Stacks the top-row and the content */
+    flex: 1; /* Takes up all remaining space next to the sidebar */
+    height: 100vh; /* Makes sure it's full height */
 }
 ::deep .page-layout,
 ::deep .page-layout > .dxbl-gridlayout-root,
@@ -11,7 +17,9 @@
 
 ::deep .content {
     padding: 1.1rem 2rem 0 2rem;
-    overflow: auto;
+    overflow-y: auto; /* We only need vertical scrolling */
+    flex: 1; /* Makes the content area fill the remaining space in <main> */
+    height: 100%; /* Fixes some overflow calculation issues */
 }
 
 @media (max-width: 1199.98px) {
