@@ -1,13 +1,12 @@
 ﻿.table-container {
-    max-height: 38vh;
-    overflow-y: auto;
+    /* max-height: 38vh;  <-- REMOVED */
+    overflow-y: visible; /* <-- CHANGED from auto */
     overflow-x: auto;
     border: 1px solid #dee2e6;
     position: relative;
 }
-
 .historic-table {
-    max-height: 30vh;
+    /* max-height: 30vh; <-- REMOVED */
 }
 
 /* Sticky Header */
