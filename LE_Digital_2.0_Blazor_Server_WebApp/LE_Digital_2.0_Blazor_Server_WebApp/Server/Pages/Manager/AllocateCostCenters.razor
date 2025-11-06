@@ -124,7 +124,7 @@ else
                     <p>Enter the total budget you want to allocate to this cost center (@selectedCostCenterForAllocation.CostCenterName) for the year.</p>
                     <div class="input-group mb-3">
                         <span class="input-group-text">R$</span>
-                        <input type="number" step="0.01" class="form-control" @bind="currentAllocationValueInput" placeholder="0.00" />
+                        <input type="text" class="form-control" @bind="currentAllocationStringInput" placeholder="0" />
                     </div>
                     @if (!string.IsNullOrEmpty(popupErrorMessage))
                     {
@@ -154,7 +154,7 @@ else
     private CultureInfo ptBR = new CultureInfo("pt-BR");
 
     private CostCenterParent? selectedCostCenterForAllocation;
-    private decimal? currentAllocationValueInput;
+    private string currentAllocationStringInput;
 
     private decimal UsedTotal => costCenters?.Sum(c => c.AllocatedValue ?? 0) ?? 0;
     private decimal RemainingValue => (managerTask?.AllocatedInvestment ?? 0) - UsedTotal;
@@ -194,43 +194,50 @@ else
         }
     }
 
-    // --- Pop-up Logic ---
     private void OpenAllocationValuePopup(CostCenterParent costCenter)
     {
         popupErrorMessage = null;
         selectedCostCenterForAllocation = costCenter;
-        currentAllocationValueInput = selectedCostCenterForAllocation.AllocatedValue; // Pre-fill
+        // Format the decimal value to a pt-BR string, using "G" to avoid trailing zeros
+        currentAllocationStringInput = selectedCostCenterForAllocation.AllocatedValue?.ToString("G29", ptBR) ?? "0";
         Logger.LogInformation("Opening pop-up for CC {Code} (ID: {Id})", costCenter.CostCenterCode, costCenter.CostCenterID);
     }
 
     private void CloseAllocationValuePopup()
     {
         selectedCostCenterForAllocation = null;
-        currentAllocationValueInput = null;
+        currentAllocationStringInput = null;
         popupErrorMessage = null;
     }
 
     private async Task SaveValueAndNavigateToEditDetails()
     {
         popupErrorMessage = null;
-        if (selectedCostCenterForAllocation == null || currentAllocationValueInput == null || currentAllocationValueInput < 0)
+
+        // Try to parse the string using Brazilian (pt-BR) culture
+        if (selectedCostCenterForAllocation == null || !decimal.TryParse(currentAllocationStringInput, NumberStyles.Any, ptBR, out decimal parsedValue))
+        {
+            popupErrorMessage = "Please enter a valid number (e.g., 5000 or 1234,56).";
+            return;
+        }
+
+        if (parsedValue < 0)
         {
             popupErrorMessage = "Please enter a valid, non-negative allocation value.";
             return;
         }
 
         // *** FIX: We no longer save here. We just navigate. ***
-        decimal valueToPass = currentAllocationValueInput.Value;
-
+        decimal valueToPass = parsedValue; // Use the correctly parsed value
         Logger.LogInformation("Navigating to Edit Details for CC ID: {Id} with new value {Value}",
             selectedCostCenterForAllocation.CostCenterID, valueToPass);
-
         var costCenterIdToNavigate = selectedCostCenterForAllocation.CostCenterID;
         CloseAllocationValuePopup(); // Close popup first
 
         // Navigate with the new value in the route
-        NavigationManager.NavigateTo($"/manager/edit-cost-center/{costCenterIdToNavigate}?allocatedValue={valueToPass}");
-        // We are no longer calling any service methods here.
+        // We MUST pass the value in invariant culture (with '.') for the query parameter to bind correctly
+        string valueToPassInvariant = valueToPass.ToString(CultureInfo.InvariantCulture);
+        NavigationManager.NavigateTo($"/manager/edit-cost-center/{costCenterIdToNavigate}?allocatedValue={valueToPassInvariant}");
     }
 
 

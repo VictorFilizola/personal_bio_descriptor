@@ -1,6 +1,7 @@
 ﻿@using LE_Digital_2_Blazor_Server_WebApp.Core.Models
 @using LE_Digital_2_Blazor_Server_WebApp.Core.Interfaces
 @using System.Security.Claims
+@using System.Globalization @* <-- ADD THIS *@
 
 @inject IManagerService ManagerService
 @inject AuthenticationStateProvider AuthStateProvider
@@ -19,10 +20,13 @@
                 </div>
                 <div class="modal-body">
                     <p>Enter the total budget you want to allocate to this cost center (@TargetCostCenter.CostCenterName) for the year.</p>
+
+                    @* --- MODIFIED INPUT --- *@
                     <div class="input-group mb-3">
                         <span class="input-group-text">R$</span>
-                        <input type="number" step="0.01" class="form-control" @bind="allocationValueInput" placeholder="0.00" />
+                        <input type="text" class="form-control" @bind="allocationStringInput" placeholder="0" />
                     </div>
+
                     @if (!string.IsNullOrEmpty(popupErrorMessage))
                     {
                         <div class="alert alert-danger mt-2">@popupErrorMessage</div>
@@ -47,18 +51,21 @@
     [Parameter]
     public EventCallback OnClose { get; set; }
 
-    private decimal? allocationValueInput;
+    // --- MODIFIED PROPERTIES ---
+    private string allocationStringInput = "0";
     private string? popupErrorMessage;
+    private CultureInfo ptBR = new CultureInfo("pt-BR");
 
     protected override void OnParametersSet()
     {
         if (IsVisible && TargetCostCenter != null)
         {
-            allocationValueInput = TargetCostCenter.AllocatedValue;
+            // Format the decimal value to a pt-BR string, using "G" to avoid trailing zeros
+            allocationStringInput = TargetCostCenter.AllocatedValue?.ToString("G29", ptBR) ?? "0";
         }
         else
         {
-            allocationValueInput = null;
+            allocationStringInput = "0";
         }
         popupErrorMessage = null;
     }
@@ -66,24 +73,36 @@
     private async Task SaveValueAndNavigate()
     {
         popupErrorMessage = null;
-        if (TargetCostCenter == null || allocationValueInput == null || allocationValueInput < 0)
+        if (TargetCostCenter == null)
+        {
+            popupErrorMessage = "Error: Target cost center not found.";
+            return;
+        }
+
+        // Try to parse the string using Brazilian (pt-BR) culture
+        if (!decimal.TryParse(allocationStringInput, NumberStyles.Any, ptBR, out decimal parsedValue))
+        {
+            popupErrorMessage = "Please enter a valid number (e.g., 5000 or 1234,56).";
+            return;
+        }
+
+        if (parsedValue < 0)
         {
             popupErrorMessage = "Please enter a valid, non-negative allocation value.";
             return;
         }
 
         // --- THIS IS THE MODIFIED LOGIC ---
-
-        // 1. Get the values to pass (no service call)
         var costCenterIdToNavigate = TargetCostCenter.CostCenterID;
-        var valueToPass = allocationValueInput.Value;
+        var valueToPass = parsedValue; // Use the correctly parsed value
 
         // 2. Close the popup
         await ClosePopup();
 
-        // 3. Navigate to the details page, passing the new value as a query parameter.
-        //    This does NOT save to the database.
-        NavigationManager.NavigateTo($"/manager/edit-cost-center/{costCenterIdToNavigate}?allocatedValue={valueToPass}");
+        // 3. Navigate to the details page
+        // We MUST pass the value in invariant culture (with '.') for the query parameter to bind correctly
+        string valueToPassInvariant = valueToPass.ToString(CultureInfo.InvariantCulture);
+        NavigationManager.NavigateTo($"/manager/edit-cost-center/{costCenterIdToNavigate}?allocatedValue={valueToPassInvariant}");
     }
 
     private async Task ClosePopup()

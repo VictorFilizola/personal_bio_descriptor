@@ -52,7 +52,7 @@
 
 /* Style inputs in the allocation table */
 .allocation-table input[type=number] {
-    width: 90px;
+    width: 65px;
     padding: 0.2rem 0.4rem;
     font-size: 0.8rem;
     border: 1px solid #ced4da;
